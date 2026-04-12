@@ -91,6 +91,13 @@
           <option value="hr_admin">HR Administrator</option>
         </select>
       </div>
+      <div class="form-group" id="add-school-group" style="display:none">
+        <label>Assigned Building <span class="required">*</span></label>
+        <select id="add-school" class="form-control">
+          <option value="">— Select Building —</option>
+        </select>
+        <p class="form-hint">This principal will only see transfers to/from this building.</p>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('addModal')">Cancel</button>
@@ -139,6 +146,13 @@
           <option value="hr_admin">HR Administrator</option>
         </select>
       </div>
+      <div class="form-group" id="edit-school-group" style="display:none">
+        <label>Assigned Building</label>
+        <select id="edit-school" class="form-control">
+          <option value="">— Select Building —</option>
+        </select>
+        <p class="form-hint">This principal will only see transfers to/from this building.</p>
+      </div>
       <div class="form-group">
         <label>Account Status</label>
         <select id="edit-active" class="form-control">
@@ -158,10 +172,29 @@
 <script>
 const user = requireAuth(['hr_admin']);
 let allEmployees = [];
+let allSchools = [];
 
 if (user) {
   initSidebar(user);
   loadEmployees();
+  loadSchools();
+
+  function loadSchools() {
+    API.get('/admin/schools').then(data => {
+      allSchools = data;
+      const opts = data.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+      document.getElementById('add-school').innerHTML = '<option value="">— Select Building —</option>' + opts;
+      document.getElementById('edit-school').innerHTML = '<option value="">— Select Building —</option>' + opts;
+    });
+  }
+
+  // Show/hide school dropdown based on role selection
+  document.getElementById('add-role').addEventListener('change', function() {
+    document.getElementById('add-school-group').style.display = this.value === 'principal' ? 'block' : 'none';
+  });
+  document.getElementById('edit-role').addEventListener('change', function() {
+    document.getElementById('edit-school-group').style.display = this.value === 'principal' ? 'block' : 'none';
+  });
 
   document.getElementById('searchInput').addEventListener('input', filterRender);
 
@@ -216,12 +249,15 @@ if (user) {
 
   document.getElementById('save-edit-btn').addEventListener('click', async () => {
     const id = document.getElementById('edit-id').value;
+    const role = document.getElementById('edit-role').value;
+    const school_id = document.getElementById('edit-school').value;
     const btn = document.getElementById('save-edit-btn');
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
     hideAlert('edit-alert');
     try {
       await API.put(`/admin/employees/${id}`, {
-        role: document.getElementById('edit-role').value,
+        role,
+        school_id: school_id || null,
         is_active: document.getElementById('edit-active').value === '1',
       });
       closeModal('editModal');
@@ -232,14 +268,19 @@ if (user) {
 
   document.getElementById('save-add-btn').addEventListener('click', async () => {
     const email = document.getElementById('add-email').value.trim();
+    const role = document.getElementById('add-role').value;
+    const school_id = document.getElementById('add-school').value;
     if (!email) { showAlert('add-alert', 'Email is required.'); return; }
+    if (role === 'principal' && !school_id) { showAlert('add-alert', 'Please select a building for this principal.'); return; }
     const btn = document.getElementById('save-add-btn');
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
     hideAlert('add-alert');
     try {
-      await API.post('/admin/employees', { email, role: document.getElementById('add-role').value });
+      await API.post('/admin/employees', { email, role, school_id: school_id || null });
       showAlert('add-alert', 'Employee added successfully.', 'success');
       document.getElementById('add-email').value = '';
+      document.getElementById('add-role').value = 'employee';
+      document.getElementById('add-school-group').style.display = 'none';
       loadEmployees();
       setTimeout(() => closeModal('addModal'), 1200);
     } catch (err) { showAlert('add-alert', err.message); }

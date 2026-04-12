@@ -169,7 +169,7 @@ router.post('/employees/bulk-add', authenticate, requireRole('hr_admin'), csvUpl
 
 // Add single employee
 router.post('/employees', authenticate, requireRole('hr_admin'), (req, res) => {
-  const { email: em, role } = req.body;
+  const { email: em, role, school_id } = req.body;
   if (!em) return res.status(400).json({ error: 'Email is required.' });
 
   const db = getDb();
@@ -181,21 +181,34 @@ router.post('/employees', authenticate, requireRole('hr_admin'), (req, res) => {
   if (config.hrAdminEmails.includes(lower)) assignedRole = 'hr_admin';
 
   db.prepare('INSERT INTO users (email, role) VALUES (?, ?)').run(lower, assignedRole);
+
+  // If principal, link them to their school
+  if (assignedRole === 'principal' && school_id) {
+    db.prepare('UPDATE schools SET principal_email = ? WHERE id = ?').run(lower, school_id);
+  }
+
   res.status(201).json({ message: 'Employee added. They can now register on the site.' });
 });
 
 // Update employee role or status
 router.put('/employees/:id', authenticate, requireRole('hr_admin'), (req, res) => {
-  const { role, is_active } = req.body;
+  const { role, is_active, school_id } = req.body;
   const db = getDb();
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
   if (!user) return res.status(404).json({ error: 'User not found.' });
 
+  const newRole = role || user.role;
   db.prepare('UPDATE users SET role = ?, is_active = ? WHERE id = ?').run(
-    role || user.role,
+    newRole,
     is_active !== undefined ? (is_active ? 1 : 0) : user.is_active,
     req.params.id
   );
+
+  // If assigning as principal, link them to their school
+  if (newRole === 'principal' && school_id) {
+    db.prepare('UPDATE schools SET principal_email = ? WHERE id = ?').run(user.email, school_id);
+  }
+
   res.json({ message: 'User updated.' });
 });
 

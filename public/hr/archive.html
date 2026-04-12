@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Archive — GCK Transfer Center</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<button class="sidebar-toggle">☰</button>
+<div class="sidebar-overlay"></div>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" alt="USD 457"><h2>Transfer Center</h2><p>USD 457 — HR Admin</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">HR Administration</div>
+      <a href="/hr/dashboard.html" class="nav-item"><span class="icon">🏠</span> Dashboard</a>
+      <a href="/hr/postings.html" class="nav-item"><span class="icon">📋</span> Job Postings</a>
+      <a href="/hr/applications.html" class="nav-item"><span class="icon">📁</span> All Applications</a>
+      <a href="/hr/employees.html" class="nav-item"><span class="icon">👥</span> Employees</a>
+      <a href="/hr/archive.html" class="nav-item"><span class="icon">🗄️</span> Archive</a>
+      <div class="nav-section">Account</div>
+      <a href="/account.html" class="nav-item"><span class="icon">⚙️</span> Account Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar">?</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebar-name">Loading…</div>
+          <div class="sidebar-user-role" id="sidebar-role">HR Administrator</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header">
+      <div><h1>Archive</h1><p>Completed, denied, and closed transfer records</p></div>
+      <button class="btn btn-secondary" id="exportBtn">Export CSV</button>
+    </div>
+    <div class="page-body">
+      <div class="card mb-4">
+        <div class="card-body" style="padding:16px 24px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;align-items:end">
+            <div class="form-group" style="margin:0">
+              <label>Search</label>
+              <input type="text" id="searchInput" class="form-control" placeholder="Name, position, school…">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>Outcome</label>
+              <select id="statusFilter" class="form-control">
+                <option value="">All Outcomes</option>
+                <option value="hr_approved">Transfer Approved</option>
+                <option value="hr_denied">Denied by HR</option>
+                <option value="sending_denied">Denied by Sending Principal</option>
+                <option value="receiving_denied">Denied by Receiving Principal</option>
+                <option value="position_filled">Position Filled (other candidate)</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>From Date</label>
+              <input type="date" id="fromDate" class="form-control">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>To Date</label>
+              <input type="date" id="toDate" class="form-control">
+            </div>
+            <button class="btn btn-primary" id="searchBtn">Search</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="archive-container">
+        <div class="empty-state">
+          <div class="empty-icon">🗄️</div>
+          <h3>Use the filters above to search the archive</h3>
+          <p>All completed and closed transfer records are stored here.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <h3 id="detail-title">Transfer Record</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body" id="detail-body">
+      <div class="loading-overlay"><div class="spinner"></div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('detailModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const user = requireAuth(['hr_admin']);
+
+if (user) {
+  initSidebar(user);
+
+  function search() {
+    const params = new URLSearchParams();
+    const q = document.getElementById('searchInput').value.trim();
+    const status = document.getElementById('statusFilter').value;
+    const from = document.getElementById('fromDate').value;
+    const to = document.getElementById('toDate').value;
+    if (q) params.set('search', q);
+    if (status) params.set('status', status);
+    if (from) params.set('from_date', from);
+    if (to) params.set('to_date', to);
+
+    document.getElementById('archive-container').innerHTML = `<div class="loading-overlay"><div class="spinner"></div><p>Searching…</p></div>`;
+
+    API.get(`/admin/archive?${params}`).then(render).catch(() => {
+      document.getElementById('archive-container').innerHTML = `<div class="alert alert-error">Search failed.</div>`;
+    });
+  }
+
+  document.getElementById('searchBtn').addEventListener('click', search);
+  document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+
+  // Run initial search to show recent records
+  search();
+
+  function outcomeLabel(status) {
+    const map = {
+      hr_approved:      { text: 'Transfer Approved', cls: 'badge-approved' },
+      hr_denied:        { text: 'Denied by HR', cls: 'badge-denied' },
+      sending_denied:   { text: 'Denied — Sending Principal', cls: 'badge-denied' },
+      receiving_denied: { text: 'Denied — Receiving Principal', cls: 'badge-denied' },
+      position_filled:  { text: 'Position Filled', cls: 'badge-closed' },
+    };
+    const s = map[status] || { text: status, cls: 'badge-pending' };
+    return `<span class="badge ${s.cls}">${s.text}</span>`;
+  }
+
+  function render(records) {
+    const c = document.getElementById('archive-container');
+    if (!records.length) {
+      c.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><h3>No records found</h3><p>Try adjusting your search filters.</p></div>`;
+      return;
+    }
+    c.innerHTML = `<div class="card"><p style="padding:12px 24px 0;font-size:.85rem;color:var(--gray)">${records.length} record${records.length !== 1 ? 's' : ''} found</p><div class="table-wrapper"><table><thead><tr>
+      <th>Applicant</th><th>From</th><th>Position</th><th>To School</th><th>Applied</th><th>Interview</th><th>Outcome</th><th></th>
+    </tr></thead><tbody>` +
+    records.map(a => `<tr>
+      <td><strong>${a.employee_name}</strong><br><small class="text-gray">${a.current_position}</small></td>
+      <td>${a.current_school}</td>
+      <td>${a.posting_title}</td>
+      <td>${a.school_name}</td>
+      <td>${formatDate(a.applied_date)}</td>
+      <td>${a.interview_date ? formatDate(a.interview_date) : '—'}</td>
+      <td>${outcomeLabel(a.status)}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="viewDetail(${a.id})">View</button></td>
+    </tr>`).join('') +
+    `</tbody></table></div></div>`;
+  }
+
+  async function viewDetail(id) {
+    document.getElementById('detail-body').innerHTML = `<div class="loading-overlay"><div class="spinner"></div></div>`;
+    openModal('detailModal');
+    try {
+      const a = await API.get(`/applications/${id}`);
+      document.getElementById('detail-title').textContent = `${a.employee_name} — ${a.posting_title}`;
+      document.getElementById('detail-body').innerHTML = `
+        ${buildTracker(a)}
+        <hr style="border:none;border-top:1px solid var(--light-gray);margin:20px 0">
+        <div class="detail-grid">
+          <div class="detail-item"><label>Applicant</label><p>${a.employee_name}</p></div>
+          <div class="detail-item"><label>Position</label><p>${a.posting_title}</p></div>
+          <div class="detail-item"><label>From</label><p>${a.current_school}</p></div>
+          <div class="detail-item"><label>Current Position</label><p>${a.current_position}</p></div>
+          <div class="detail-item"><label>To School</label><p>${a.school_name}</p></div>
+          <div class="detail-item"><label>FTE</label><p>${a.fte}</p></div>
+          <div class="detail-item"><label>Date Applied</label><p>${formatDate(a.applied_date)}</p></div>
+          ${a.interview_date ? `<div class="detail-item"><label>Interview Date</label><p>${formatDate(a.interview_date)}</p></div>` : ''}
+        </div>
+        ${a.sending_decision ? `<div class="decision-box ${a.sending_decision} mt-4"><h4>Sending Principal: ${a.sending_decision === 'approved' ? '✓ Approved' : '✗ Denied'}${a.sending_actor ? ' — ' + a.sending_actor : ''}</h4>${a.sending_notes ? `<p>${a.sending_notes}</p>` : ''}<p style="font-size:.8rem;color:var(--gray)">${formatDate(a.sending_date)}</p></div>` : ''}
+        ${a.receiving_decision ? `<div class="decision-box ${a.receiving_decision} mt-4"><h4>Receiving Principal: ${a.receiving_decision === 'approved' ? '✓ Approved' : '✗ Denied'}${a.receiving_actor ? ' — ' + a.receiving_actor : ''}</h4>${a.receiving_notes ? `<p>${a.receiving_notes}</p>` : ''}<p style="font-size:.8rem;color:var(--gray)">${formatDate(a.receiving_date)}</p></div>` : ''}
+        ${a.hr_decision ? `<div class="decision-box ${a.hr_decision} mt-4"><h4>HR Final Decision: ${a.hr_decision === 'approved' ? '✓ Transfer Approved' : '✗ Denied'}${a.hr_actor ? ' — ' + a.hr_actor : ''}</h4>${a.hr_notes ? `<p>${a.hr_notes}</p>` : ''}<p style="font-size:.8rem;color:var(--gray)">${formatDate(a.hr_date)}</p></div>` : ''}
+        ${a.resume_drive_url ? `<div style="margin-top:16px"><a href="${a.resume_drive_url}" target="_blank" class="btn btn-info btn-sm">📄 View Resume</a></div>` : ''}
+      `;
+    } catch {
+      document.getElementById('detail-body').innerHTML = `<div class="alert alert-error">Failed to load record.</div>`;
+    }
+  }
+  window.viewDetail = viewDetail;
+
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    const params = new URLSearchParams();
+    const q = document.getElementById('searchInput').value.trim();
+    const status = document.getElementById('statusFilter').value;
+    const from = document.getElementById('fromDate').value;
+    const to = document.getElementById('toDate').value;
+    if (q) params.set('search', q);
+    if (status) params.set('status', status);
+    if (from) params.set('from_date', from);
+    if (to) params.set('to_date', to);
+    const token = localStorage.getItem('tc_token');
+    fetch(`/api/export/applications?${params}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.blob()).then(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `transfer-archive-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+      });
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Principal Dashboard — GCK Transfer Center</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<button class="sidebar-toggle">☰</button>
+<div class="sidebar-overlay"></div>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" alt="USD 457"><h2>Transfer Center</h2><p>USD 457 — Administrator</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Administrator</div>
+      <a href="/principal/dashboard.html" class="nav-item"><span class="icon">🏠</span> Dashboard</a>
+      <a href="/principal/sending-approvals.html" class="nav-item"><span class="icon">📤</span> Sending Approvals <span class="nav-badge" id="badge-sending" style="display:none">0</span></a>
+      <a href="/principal/receiving-approvals.html" class="nav-item"><span class="icon">📥</span> Receiving &amp; Interviews <span class="nav-badge" id="badge-receiving" style="display:none">0</span></a>
+      <div class="nav-section">Account</div>
+      <a href="/account.html" class="nav-item"><span class="icon">⚙️</span> Account Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar">?</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebar-name">Loading…</div>
+          <div class="sidebar-user-role" id="sidebar-role">Administrator</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header">
+      <div><h1>Administrator Dashboard</h1><p id="school-name">Loading…</p></div>
+    </div>
+    <div class="page-body">
+      <div class="stats-grid">
+        <div class="stat-card orange"><div class="stat-number" id="stat-sending">—</div><div class="stat-label">Pending Sending Approvals</div></div>
+        <div class="stat-card blue"><div class="stat-number" id="stat-receiving">—</div><div class="stat-label">Pending Receiving / Interviews</div></div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header">
+          <h2>Employees Requesting to Leave Your Building</h2>
+          <a href="/principal/sending-approvals.html" class="btn btn-outline btn-sm">View All</a>
+        </div>
+        <div id="sending-container"><div class="loading-overlay"><div class="spinner"></div></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Applicants for Positions at Your Building</h2>
+          <a href="/principal/receiving-approvals.html" class="btn btn-outline btn-sm">View All</a>
+        </div>
+        <div id="receiving-container"><div class="loading-overlay"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/js/app.js"></script>
+<script>
+const user = requireAuth(['principal']);
+if (user) {
+  initSidebar(user);
+
+  API.get('/admin/principal-stats').then(stats => {
+    document.getElementById('school-name').textContent = stats.school_name || '';
+    document.getElementById('stat-sending').textContent = stats.pending_sending;
+    document.getElementById('stat-receiving').textContent = stats.pending_receiving;
+    if (stats.pending_sending > 0) { const b = document.getElementById('badge-sending'); b.textContent = stats.pending_sending; b.style.display = ''; }
+    if (stats.pending_receiving > 0) { const b = document.getElementById('badge-receiving'); b.textContent = stats.pending_receiving; b.style.display = ''; }
+  });
+
+  API.get('/applications?status=pending_sending_principal').then(apps => {
+    const c = document.getElementById('sending-container');
+    const mine = apps.filter(a => true); // server already filters by principal
+    if (!mine.length) { c.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div><h3>No pending sending approvals</h3></div>`; return; }
+    c.innerHTML = renderTable(mine.slice(0, 5));
+  });
+
+  API.get('/applications?status=pending_interview').then(apps => {
+    const c = document.getElementById('receiving-container');
+    if (!apps.length) { c.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div><h3>No pending receiving approvals</h3></div>`; return; }
+    c.innerHTML = renderTable(apps.slice(0, 5), true);
+  });
+
+  function renderTable(apps, isReceiving = false) {
+    return `<div class="table-wrapper"><table><thead><tr>
+      <th>Applicant</th><th>Current School</th><th>Applying For</th><th>Date Applied</th><th></th>
+    </tr></thead><tbody>` +
+    apps.map(a => `<tr>
+      <td><strong>${a.employee_name}</strong><br><small>${a.current_position}</small></td>
+      <td>${a.current_school}</td>
+      <td>${a.posting_title}</td>
+      <td>${formatDate(a.applied_date)}</td>
+      <td><a href="/principal/${isReceiving ? 'receiving-approvals' : 'sending-approvals'}.html?id=${a.id}" class="btn btn-primary btn-sm">Review</a></td>
+    </tr>`).join('') +
+    `</tbody></table></div>`;
+  }
+}
+</script>
+</body>
+</html>

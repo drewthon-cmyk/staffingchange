@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employees — GCK Transfer Center</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<button class="sidebar-toggle">☰</button>
+<div class="sidebar-overlay"></div>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" alt="USD 457"><h2>Transfer Center</h2><p>USD 457 — HR Admin</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">HR Administration</div>
+      <a href="/hr/dashboard.html" class="nav-item"><span class="icon">🏠</span> Dashboard</a>
+      <a href="/hr/postings.html" class="nav-item"><span class="icon">📋</span> Job Postings</a>
+      <a href="/hr/applications.html" class="nav-item"><span class="icon">📁</span> All Applications</a>
+      <a href="/hr/employees.html" class="nav-item"><span class="icon">👥</span> Employees</a>
+      <a href="/hr/archive.html" class="nav-item"><span class="icon">🗄️</span> Archive</a>
+      <div class="nav-section">Account</div>
+      <a href="/account.html" class="nav-item"><span class="icon">⚙️</span> Account Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar">?</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebar-name">Loading…</div>
+          <div class="sidebar-user-role" id="sidebar-role">HR Administrator</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header">
+      <div><h1>Employee Management</h1><p>Pre-load employee emails and manage access</p></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-secondary" onclick="openModal('csvModal')">Upload CSV</button>
+        <button class="btn btn-primary" onclick="openModal('addModal')">+ Add Employee</button>
+      </div>
+    </div>
+    <div class="page-body">
+
+      <!-- Principal CSV Upload Card -->
+      <div class="card mb-4">
+        <div class="card-header"><h2>Principal / Administrator Directory</h2></div>
+        <div class="card-body">
+          <p style="color:var(--gray);font-size:.9rem;margin-bottom:16px">
+            Upload a CSV to assign principals to buildings. Required columns: <strong>name</strong>, <strong>principal_name</strong>, <strong>principal_email</strong>
+          </p>
+          <div id="principal-alert" class="alert hidden"></div>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <input type="file" id="principalCsv" accept=".csv" class="form-control" style="max-width:320px">
+            <button class="btn btn-primary" id="uploadPrincipalBtn">Upload Principal CSV</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Employee list -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Registered Employees</h2>
+          <input type="text" class="form-control" id="searchInput" placeholder="Search by name or email…" style="max-width:260px;padding:8px 12px">
+        </div>
+        <div id="employees-container">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Add Single Employee Modal -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-header"><h3>Add Employee</h3><button class="modal-close">✕</button></div>
+    <div class="modal-body">
+      <div id="add-alert" class="alert hidden"></div>
+      <div class="form-group">
+        <label>Email Address <span class="required">*</span></label>
+        <input type="email" id="add-email" class="form-control" placeholder="employee@gckschools.com">
+        <p class="form-hint">The employee will be able to register once their email is added.</p>
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select id="add-role" class="form-control">
+          <option value="employee">Employee</option>
+          <option value="principal">Principal / Administrator</option>
+          <option value="hr_admin">HR Administrator</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('addModal')">Cancel</button>
+      <button class="btn btn-primary" id="save-add-btn">Add Employee</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk CSV Upload Modal -->
+<div class="modal-overlay" id="csvModal">
+  <div class="modal">
+    <div class="modal-header"><h3>Bulk Upload Employee Emails</h3><button class="modal-close">✕</button></div>
+    <div class="modal-body">
+      <div id="csv-alert" class="alert hidden"></div>
+      <p style="color:var(--gray);font-size:.9rem;margin-bottom:16px">
+        Upload a CSV with an <strong>email</strong> column, or paste emails one per line below.
+      </p>
+      <div class="form-group">
+        <label>CSV File</label>
+        <input type="file" id="bulk-csv" accept=".csv" class="form-control">
+      </div>
+      <div class="form-group">
+        <label>Or paste emails (one per line)</label>
+        <textarea id="bulk-emails" class="form-control" rows="6" placeholder="employee1@gckschools.com&#10;employee2@gckschools.com"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('csvModal')">Cancel</button>
+      <button class="btn btn-primary" id="save-csv-btn">Upload</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Role Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="edit-modal-title">Edit Employee</h3><button class="modal-close">✕</button></div>
+    <div class="modal-body">
+      <div id="edit-alert" class="alert hidden"></div>
+      <input type="hidden" id="edit-id">
+      <div class="form-group">
+        <label>Role</label>
+        <select id="edit-role" class="form-control">
+          <option value="employee">Employee</option>
+          <option value="principal">Principal / Administrator</option>
+          <option value="hr_admin">HR Administrator</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Account Status</label>
+        <select id="edit-active" class="form-control">
+          <option value="1">Active</option>
+          <option value="0">Deactivated</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+      <button class="btn btn-primary" id="save-edit-btn">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const user = requireAuth(['hr_admin']);
+let allEmployees = [];
+
+if (user) {
+  initSidebar(user);
+  loadEmployees();
+
+  document.getElementById('searchInput').addEventListener('input', filterRender);
+
+  function loadEmployees() {
+    API.get('/admin/employees').then(data => {
+      allEmployees = data;
+      filterRender();
+    }).catch(() => {
+      document.getElementById('employees-container').innerHTML = `<div class="alert alert-error">Failed to load employees.</div>`;
+    });
+  }
+
+  function filterRender() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = allEmployees.filter(e =>
+      (e.name || '').toLowerCase().includes(q) || e.email.toLowerCase().includes(q)
+    );
+    render(filtered);
+  }
+
+  function render(employees) {
+    const c = document.getElementById('employees-container');
+    if (!employees.length) {
+      c.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><h3>No employees found</h3></div>`;
+      return;
+    }
+    const roleLabel = r => r === 'hr_admin' ? '<span class="badge badge-hr">HR Admin</span>' : r === 'principal' ? '<span class="badge badge-interview">Principal</span>' : '<span class="badge badge-pending">Employee</span>';
+    c.innerHTML = `<div class="table-wrapper"><table><thead><tr>
+      <th>Name</th><th>Email</th><th>Role</th><th>Current School</th><th>Status</th><th>Last Login</th><th></th>
+    </tr></thead><tbody>` +
+    employees.map(e => `<tr>
+      <td><strong>${e.name || '<span style="color:var(--gray);font-style:italic">Not registered</span>'}</strong></td>
+      <td>${e.email}</td>
+      <td>${roleLabel(e.role)}</td>
+      <td>${e.current_school || '—'}</td>
+      <td>${e.is_active ? '<span class="badge badge-approved">Active</span>' : '<span class="badge badge-denied">Inactive</span>'}</td>
+      <td>${e.last_login ? formatDate(e.last_login) : '—'}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="openEdit(${e.id},'${(e.name||'').replace(/'/g,"\\'")}','${e.role}',${e.is_active})">Edit</button></td>
+    </tr>`).join('') +
+    `</tbody></table></div>`;
+  }
+
+  function openEdit(id, name, role, isActive) {
+    document.getElementById('edit-id').value = id;
+    document.getElementById('edit-modal-title').textContent = `Edit: ${name || 'Employee'}`;
+    document.getElementById('edit-role').value = role;
+    document.getElementById('edit-active').value = isActive ? '1' : '0';
+    hideAlert('edit-alert');
+    openModal('editModal');
+  }
+  window.openEdit = openEdit;
+
+  document.getElementById('save-edit-btn').addEventListener('click', async () => {
+    const id = document.getElementById('edit-id').value;
+    const btn = document.getElementById('save-edit-btn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+    hideAlert('edit-alert');
+    try {
+      await API.put(`/admin/employees/${id}`, {
+        role: document.getElementById('edit-role').value,
+        is_active: document.getElementById('edit-active').value === '1',
+      });
+      closeModal('editModal');
+      loadEmployees();
+    } catch (err) { showAlert('edit-alert', err.message); }
+    btn.disabled = false; btn.textContent = 'Save Changes';
+  });
+
+  document.getElementById('save-add-btn').addEventListener('click', async () => {
+    const email = document.getElementById('add-email').value.trim();
+    if (!email) { showAlert('add-alert', 'Email is required.'); return; }
+    const btn = document.getElementById('save-add-btn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+    hideAlert('add-alert');
+    try {
+      await API.post('/admin/employees', { email, role: document.getElementById('add-role').value });
+      showAlert('add-alert', 'Employee added successfully.', 'success');
+      document.getElementById('add-email').value = '';
+      loadEmployees();
+      setTimeout(() => closeModal('addModal'), 1200);
+    } catch (err) { showAlert('add-alert', err.message); }
+    btn.disabled = false; btn.textContent = 'Add Employee';
+  });
+
+  document.getElementById('save-csv-btn').addEventListener('click', async () => {
+    const file = document.getElementById('bulk-csv').files[0];
+    const emails = document.getElementById('bulk-emails').value.trim();
+    if (!file && !emails) { showAlert('csv-alert', 'Please provide a CSV file or paste emails.'); return; }
+    const btn = document.getElementById('save-csv-btn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+    hideAlert('csv-alert');
+    try {
+      let result;
+      if (file) {
+        const fd = new FormData(); fd.append('csv', file);
+        result = await API.upload('/admin/employees/bulk-add', fd);
+      } else {
+        result = await API.post('/admin/employees/bulk-add', { emails });
+      }
+      showAlert('csv-alert', result.message, 'success');
+      loadEmployees();
+      setTimeout(() => closeModal('csvModal'), 1500);
+    } catch (err) { showAlert('csv-alert', err.message); }
+    btn.disabled = false; btn.textContent = 'Upload';
+  });
+
+  // Principal CSV upload
+  document.getElementById('uploadPrincipalBtn').addEventListener('click', async () => {
+    const file = document.getElementById('principalCsv').files[0];
+    if (!file) { showAlert('principal-alert', 'Please select a CSV file.'); return; }
+    const btn = document.getElementById('uploadPrincipalBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+    hideAlert('principal-alert');
+    try {
+      const fd = new FormData(); fd.append('csv', file);
+      const result = await API.upload('/admin/schools/upload-csv', fd);
+      showAlert('principal-alert', result.message, 'success');
+    } catch (err) { showAlert('principal-alert', err.message); }
+    btn.disabled = false; btn.textContent = 'Upload Principal CSV';
+  });
+}
+</script>
+</body>
+</html>

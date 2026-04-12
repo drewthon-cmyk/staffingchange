@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Receiving & Interviews — GCK Transfer Center</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<button class="sidebar-toggle">☰</button>
+<div class="sidebar-overlay"></div>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" alt="USD 457"><h2>Transfer Center</h2><p>USD 457 — Administrator</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Administrator</div>
+      <a href="/principal/dashboard.html" class="nav-item"><span class="icon">🏠</span> Dashboard</a>
+      <a href="/principal/sending-approvals.html" class="nav-item"><span class="icon">📤</span> Sending Approvals</a>
+      <a href="/principal/receiving-approvals.html" class="nav-item"><span class="icon">📥</span> Receiving &amp; Interviews</a>
+      <div class="nav-section">Account</div>
+      <a href="/account.html" class="nav-item"><span class="icon">⚙️</span> Account Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar">?</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebar-name">Loading…</div>
+          <div class="sidebar-user-role" id="sidebar-role">Administrator</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header">
+      <div><h1>Receiving &amp; Interviews</h1><p>Applicants for open positions at your building</p></div>
+    </div>
+    <div class="page-body">
+      <div id="list-container">
+        <div class="loading-overlay"><div class="spinner"></div><p>Loading…</p></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Schedule Interview Modal -->
+<div class="modal-overlay" id="scheduleModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Schedule Interview</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="schedule-info" style="background:var(--light-gray);border-radius:8px;padding:14px;margin-bottom:20px;font-size:.9rem"></div>
+      <div id="schedule-alert" class="alert hidden"></div>
+      <div class="form-group">
+        <label>Interview Date <span class="required">*</span></label>
+        <input type="date" id="interview-date" class="form-control" required>
+      </div>
+      <div class="form-group">
+        <label>Location / Room (optional)</label>
+        <input type="text" id="interview-location" class="form-control" placeholder="e.g., Principal's Office, Room 101">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('scheduleModal')">Cancel</button>
+      <button class="btn btn-primary" id="btn-schedule">Save Interview</button>
+    </div>
+  </div>
+</div>
+
+<!-- Decision Modal -->
+<div class="modal-overlay" id="decisionModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="decision-modal-title">Make Decision</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="decision-info" style="background:var(--light-gray);border-radius:8px;padding:14px;margin-bottom:20px;font-size:.9rem"></div>
+      <div id="decision-alert" class="alert hidden"></div>
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <textarea id="decision-notes" class="form-control" rows="3" placeholder="Add any comments…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('decisionModal')">Cancel</button>
+      <button class="btn btn-danger" id="btn-deny">Deny Transfer</button>
+      <button class="btn btn-success" id="btn-approve">Approve Transfer</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const user = requireAuth(['principal']);
+let currentAppId = null;
+
+if (user) {
+  initSidebar(user);
+  loadApps();
+
+  function loadApps() {
+    document.getElementById('list-container').innerHTML = `<div class="loading-overlay"><div class="spinner"></div></div>`;
+    // Get both pending_interview and interview_scheduled
+    Promise.all([
+      API.get('/applications?status=pending_interview'),
+      API.get('/applications?status=interview_scheduled'),
+    ]).then(([pending, scheduled]) => {
+      render([...pending, ...scheduled]);
+    }).catch(() => {
+      document.getElementById('list-container').innerHTML = `<div class="alert alert-error">Failed to load.</div>`;
+    });
+  }
+
+  function render(apps) {
+    const c = document.getElementById('list-container');
+    if (!apps.length) {
+      c.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div><h3>No applicants to review</h3><p>You're all caught up.</p></div>`;
+      return;
+    }
+
+    // Group by posting
+    const byPosting = {};
+    apps.forEach(a => {
+      if (!byPosting[a.posting_id]) byPosting[a.posting_id] = { title: a.posting_title, apps: [] };
+      byPosting[a.posting_id].apps.push(a);
+    });
+
+    c.innerHTML = Object.values(byPosting).map(group => `
+      <div class="card mb-4">
+        <div class="card-header"><h2>${group.title}</h2></div>
+        <div class="table-wrapper"><table><thead><tr>
+          <th>Applicant</th><th>Current School</th><th>Current Position</th><th>Applied</th><th>Interview</th><th>Resume</th><th>Actions</th>
+        </tr></thead><tbody>` +
+        group.apps.map(a => `<tr>
+          <td><strong>${a.employee_name}</strong></td>
+          <td>${a.current_school}</td>
+          <td>${a.current_position}</td>
+          <td>${formatDate(a.applied_date)}</td>
+          <td>${a.interview_date ? formatDate(a.interview_date) : '<span style="color:var(--orange)">Not scheduled</span>'}</td>
+          <td>${a.resume_drive_url ? `<a href="${a.resume_drive_url}" target="_blank" class="btn btn-outline btn-sm">📄 Resume</a>` : '—'}</td>
+          <td style="white-space:nowrap">
+            <button class="btn btn-info btn-sm" onclick="openSchedule(${a.id},'${a.employee_name.replace(/'/g,"\\'")}')">
+              ${a.interview_date ? 'Reschedule' : 'Schedule Interview'}
+            </button>
+            ${a.interview_date ? `
+              <button class="btn btn-success btn-sm" onclick="openDecision(${a.id},'${a.employee_name.replace(/'/g,"\\'")}',true)" style="margin-left:4px">Approve</button>
+              <button class="btn btn-danger btn-sm" onclick="openDecision(${a.id},'${a.employee_name.replace(/'/g,"\\'")}',false)" style="margin-left:4px">Deny</button>
+            ` : ''}
+          </td>
+        </tr>`).join('') +
+        `</tbody></table></div>
+      </div>
+    `).join('');
+  }
+
+  function openSchedule(id, name) {
+    currentAppId = id;
+    document.getElementById('schedule-info').innerHTML = `Scheduling interview for <strong>${name}</strong>`;
+    document.getElementById('interview-date').value = '';
+    document.getElementById('interview-location').value = '';
+    hideAlert('schedule-alert');
+    openModal('scheduleModal');
+  }
+  window.openSchedule = openSchedule;
+
+  function openDecision(id, name, isApprove) {
+    currentAppId = id;
+    document.getElementById('decision-modal-title').textContent = isApprove ? `Approve Transfer — ${name}` : `Deny Transfer — ${name}`;
+    document.getElementById('decision-info').innerHTML = isApprove
+      ? `You are approving <strong>${name}</strong>'s transfer. This will send the request to HR for final approval.`
+      : `You are denying <strong>${name}</strong>'s transfer request. The employee and HR will be notified.`;
+    document.getElementById('decision-notes').value = '';
+    hideAlert('decision-alert');
+    // Store approve/deny intent
+    document.getElementById('btn-approve').dataset.approve = isApprove ? '1' : '';
+    document.getElementById('btn-deny').dataset.approve = isApprove ? '' : '1';
+    // Highlight correct button
+    document.getElementById('btn-approve').style.display = isApprove ? '' : 'none';
+    document.getElementById('btn-deny').style.display = isApprove ? 'none' : '';
+    openModal('decisionModal');
+  }
+  window.openDecision = openDecision;
+
+  document.getElementById('btn-schedule').addEventListener('click', async () => {
+    const date = document.getElementById('interview-date').value;
+    if (!date) { showAlert('schedule-alert', 'Please select an interview date.'); return; }
+    const btn = document.getElementById('btn-schedule');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+    try {
+      await API.post(`/workflow/${currentAppId}/schedule-interview`, {
+        interview_date: date,
+        interview_location: document.getElementById('interview-location').value,
+      });
+      closeModal('scheduleModal');
+      loadApps();
+    } catch (err) {
+      showAlert('schedule-alert', err.message);
+      btn.disabled = false; btn.textContent = 'Save Interview';
+    }
+  });
+
+  async function submitDecision(approved) {
+    const notes = document.getElementById('decision-notes').value;
+    const btn = approved ? document.getElementById('btn-approve') : document.getElementById('btn-deny');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+    hideAlert('decision-alert');
+    try {
+      await API.post(`/workflow/${currentAppId}/receiving-decision`, { approved, notes });
+      closeModal('decisionModal');
+      loadApps();
+    } catch (err) {
+      showAlert('decision-alert', err.message);
+      btn.disabled = false; btn.textContent = approved ? 'Approve Transfer' : 'Deny Transfer';
+    }
+  }
+
+  document.getElementById('btn-approve').addEventListener('click', () => submitDecision(true));
+  document.getElementById('btn-deny').addEventListener('click', () => submitDecision(false));
+}
+</script>
+</body>
+</html>

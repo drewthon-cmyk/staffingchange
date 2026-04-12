@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account — GCK Transfer Center</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <img src="/assets/logo.svg" alt="USD 457 Logo">
+      <h1>Create Your Account</h1>
+      <p>Garden City Public Schools — USD 457</p>
+    </div>
+    <div class="auth-body">
+      <div id="alert" class="alert hidden"></div>
+      <form id="registerForm">
+        <div class="form-group">
+          <label for="email">District Email Address <span class="required">*</span></label>
+          <input type="email" id="email" class="form-control" placeholder="you@gckschools.com" required>
+          <p class="form-hint">Your email must be pre-approved by HR to register.</p>
+        </div>
+        <div class="form-group">
+          <label for="name">Full Name <span class="required">*</span></label>
+          <input type="text" id="name" class="form-control" placeholder="First and last name" required>
+        </div>
+        <div class="form-group">
+          <label for="current_school">Current School / Department <span class="required">*</span></label>
+          <select id="current_school" class="form-control" required>
+            <option value="">— Select your current building —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="current_position">Current Position / Job Title <span class="required">*</span></label>
+          <input type="text" id="current_position" class="form-control" placeholder="e.g., 3rd Grade Teacher, Paraprofessional" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Create Password <span class="required">*</span></label>
+          <input type="password" id="password" class="form-control" placeholder="At least 8 characters" required>
+        </div>
+        <div class="form-group">
+          <label for="confirm_password">Confirm Password <span class="required">*</span></label>
+          <input type="password" id="confirm_password" class="form-control" placeholder="Repeat your password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="submitBtn">Create Account</button>
+      </form>
+      <div class="auth-links">
+        <a href="/">Already have an account? Sign in</a>
+      </div>
+    </div>
+  </div>
+  <script>
+    const schools = [
+      'Garden City High School','Garden City Achieve Academy','Horace Good Middle School',
+      'Kenneth Henderson Middle School','Bernadine Sitts Intermediate School',
+      'Charles Stones Intermediate Center','Abe Huber Elementary','Alta Brown Elementary',
+      'Buffalo Jones Elementary','Edith Sheuerman Elementary','Florence Wilson Elementary',
+      'Georgia Matthews Elementary','Gertrude Walker Elementary','Jenny Berker Elementary',
+      'Plymell Elementary','Victor Ornelas Elementary','Garfield Early Childhood Center',
+      'Finance Department','HR Department','Curriculum and Instruction Department',
+      'Nutrition Department','Health Services Department','Student Services Department',
+      'Transportation Department','Plant Facilities Department',
+    ];
+    const sel = document.getElementById('current_school');
+    schools.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o); });
+
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const alertEl = document.getElementById('alert');
+      alertEl.className = 'alert hidden';
+      const pw = document.getElementById('password').value;
+      const cpw = document.getElementById('confirm_password').value;
+      if (pw !== cpw) {
+        alertEl.textContent = 'Passwords do not match.';
+        alertEl.className = 'alert alert-error';
+        return;
+      }
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Creating account…';
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('email').value,
+            password: pw,
+            name: document.getElementById('name').value,
+            current_school: document.getElementById('current_school').value,
+            current_position: document.getElementById('current_position').value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        alertEl.textContent = 'Account created! Redirecting to sign in…';
+        alertEl.className = 'alert alert-success';
+        setTimeout(() => location.href = '/', 1800);
+      } catch (err) {
+        alertEl.textContent = err.message;
+        alertEl.className = 'alert alert-error';
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
+      }
+    });
+  </script>
+</body>
+</html>

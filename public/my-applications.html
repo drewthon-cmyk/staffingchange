@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Applications — GCK Transfer Center</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<button class="sidebar-toggle">☰</button>
+<div class="sidebar-overlay"></div>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" alt="USD 457"><h2>Transfer Center</h2><p>USD 457</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Employee</div>
+      <a href="/dashboard.html" class="nav-item"><span class="icon">🏠</span> Dashboard</a>
+      <a href="/postings.html" class="nav-item"><span class="icon">📋</span> Open Positions</a>
+      <a href="/my-applications.html" class="nav-item"><span class="icon">📁</span> My Applications</a>
+      <div class="nav-section">Account</div>
+      <a href="/account.html" class="nav-item"><span class="icon">⚙️</span> Account Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar">?</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebar-name">Loading…</div>
+          <div class="sidebar-user-role" id="sidebar-role">Employee</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header">
+      <div><h1>My Applications</h1><p>Track all of your transfer requests</p></div>
+      <a href="/postings.html" class="btn btn-primary">Apply for a Position</a>
+    </div>
+    <div class="page-body">
+      <div id="apps-container">
+        <div class="loading-overlay"><div class="spinner"></div><p>Loading…</p></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/js/app.js"></script>
+<script>
+const user = requireAuth(['employee', 'principal']);
+if (user) {
+  initSidebar(user);
+  API.get('/applications/my').then(apps => {
+    const c = document.getElementById('apps-container');
+    if (!apps.length) {
+      c.innerHTML = `<div class="empty-state"><div class="empty-icon">📁</div><h3>No applications yet</h3><p>Browse open positions to start the transfer process.</p><a href="/postings.html" class="btn btn-primary mt-4">Browse Positions</a></div>`;
+      return;
+    }
+    c.innerHTML = apps.map(a => `
+      <div class="card mb-4">
+        <div class="card-header">
+          <div>
+            <h2>${a.posting_title}</h2>
+            <p class="text-gray">${a.school_name} &nbsp;|&nbsp; FTE: ${a.fte}</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            ${statusLabel(a.status)}
+            <a href="/application-status.html?id=${a.id}" class="btn btn-outline btn-sm">Details</a>
+          </div>
+        </div>
+        <div class="card-body">
+          ${buildTracker(a)}
+          <div class="detail-grid" style="margin-top:16px">
+            <div class="detail-item"><label>Current School</label><p>${a.current_school}</p></div>
+            <div class="detail-item"><label>Current Position</label><p>${a.current_position}</p></div>
+            <div class="detail-item"><label>Date Applied</label><p>${formatDate(a.applied_date)}</p></div>
+            ${a.interview_date ? `<div class="detail-item"><label>Interview Date</label><p>${formatDate(a.interview_date)}</p></div>` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }).catch(() => {
+    document.getElementById('apps-container').innerHTML = `<div class="alert alert-error">Failed to load applications.</div>`;
+  });
+}
+</script>
+</body>
+</html>

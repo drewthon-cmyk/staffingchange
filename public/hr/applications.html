@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Applications — GCK Transfer Center</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<button class="sidebar-toggle">☰</button>
+<div class="sidebar-overlay"></div>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" alt="USD 457"><h2>Transfer Center</h2><p>USD 457 — HR Admin</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">HR Administration</div>
+      <a href="/hr/dashboard.html" class="nav-item"><span class="icon">🏠</span> Dashboard</a>
+      <a href="/hr/postings.html" class="nav-item"><span class="icon">📋</span> Job Postings</a>
+      <a href="/hr/applications.html" class="nav-item"><span class="icon">📁</span> All Applications</a>
+      <a href="/hr/employees.html" class="nav-item"><span class="icon">👥</span> Employees</a>
+      <a href="/hr/archive.html" class="nav-item"><span class="icon">🗄️</span> Archive</a>
+      <div class="nav-section">Account</div>
+      <a href="/account.html" class="nav-item"><span class="icon">⚙️</span> Account Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar">?</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebar-name">Loading…</div>
+          <div class="sidebar-user-role" id="sidebar-role">HR Administrator</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header">
+      <div><h1>All Applications</h1><p>Review and manage every transfer request</p></div>
+      <button class="btn btn-secondary" id="exportBtn">Export CSV</button>
+    </div>
+    <div class="page-body">
+      <div class="filter-bar">
+        <input type="text" class="form-control search-input" id="searchInput" placeholder="Search applicant or position…">
+        <select id="statusFilter" class="form-control">
+          <option value="">All Statuses</option>
+          <option value="pending_sending_principal">Awaiting Sending Principal</option>
+          <option value="pending_interview">Awaiting Interview</option>
+          <option value="interview_scheduled">Interview Scheduled</option>
+          <option value="pending_hr">Awaiting HR</option>
+          <option value="hr_approved">Approved</option>
+          <option value="hr_denied">Denied by HR</option>
+          <option value="sending_denied">Denied by Sending Principal</option>
+          <option value="receiving_denied">Denied by Receiving Principal</option>
+        </select>
+      </div>
+      <div id="apps-container">
+        <div class="loading-overlay"><div class="spinner"></div><p>Loading…</p></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Application Detail Modal -->
+<div class="modal-overlay" id="appModal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <h3 id="app-modal-title">Application Detail</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body" id="app-modal-body">
+      <div class="loading-overlay"><div class="spinner"></div></div>
+    </div>
+    <div class="modal-footer" id="app-modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('appModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- HR Decision Modal -->
+<div class="modal-overlay" id="hrModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="hr-modal-title">Final HR Decision</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="hr-modal-info" style="background:var(--light-gray);border-radius:8px;padding:14px;margin-bottom:20px;font-size:.9rem"></div>
+      <div id="hr-alert" class="alert hidden"></div>
+      <div class="form-group">
+        <label>HR Notes (optional)</label>
+        <textarea id="hr-notes" class="form-control" rows="3" placeholder="Comments for the employee and principals…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('hrModal')">Cancel</button>
+      <button class="btn btn-danger" id="btn-hr-deny">Deny Transfer</button>
+      <button class="btn btn-success" id="btn-hr-approve">Approve Transfer</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const user = requireAuth(['hr_admin']);
+let allApps = [];
+let currentAppId = null;
+
+if (user) {
+  initSidebar(user);
+
+  // Pre-select status from URL param
+  const urlStatus = new URLSearchParams(location.search).get('status');
+  if (urlStatus) document.getElementById('statusFilter').value = urlStatus;
+
+  loadApps();
+
+  document.getElementById('statusFilter').addEventListener('change', filterRender);
+  document.getElementById('searchInput').addEventListener('input', filterRender);
+
+  function loadApps() {
+    API.get('/applications').then(apps => {
+      allApps = apps;
+      filterRender();
+    }).catch(() => {
+      document.getElementById('apps-container').innerHTML = `<div class="alert alert-error">Failed to load applications.</div>`;
+    });
+  }
+
+  function filterRender() {
+    const status = document.getElementById('statusFilter').value;
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = allApps.filter(a =>
+      (!status || a.status === status) &&
+      (!q || a.employee_name.toLowerCase().includes(q) || a.posting_title.toLowerCase().includes(q) || a.school_name.toLowerCase().includes(q))
+    );
+    render(filtered);
+  }
+
+  function render(apps) {
+    const c = document.getElementById('apps-container');
+    if (!apps.length) {
+      c.innerHTML = `<div class="empty-state"><div class="empty-icon">📁</div><h3>No applications match your filters</h3></div>`;
+      return;
+    }
+    c.innerHTML = `<div class="card"><div class="table-wrapper"><table><thead><tr>
+      <th>Applicant</th><th>From</th><th>Position</th><th>To School</th><th>Applied</th><th>Interview</th><th>Status</th><th></th>
+    </tr></thead><tbody>` +
+    apps.map(a => `<tr>
+      <td><strong>${a.employee_name}</strong><br><small class="text-gray">${a.current_position}</small></td>
+      <td>${a.current_school}</td>
+      <td>${a.posting_title}</td>
+      <td>${a.school_name}</td>
+      <td>${formatDate(a.applied_date)}</td>
+      <td>${a.interview_date ? formatDate(a.interview_date) : '—'}</td>
+      <td>${statusLabel(a.status)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline btn-sm" onclick="viewApp(${a.id})">View</button>
+        ${a.status === 'pending_hr' ? `<button class="btn btn-primary btn-sm" onclick="openHrDecision(${a.id},'${a.employee_name.replace(/'/g,"\\'")}','${a.posting_title.replace(/'/g,"\\'")}','${a.school_name.replace(/'/g,"\\'")}')">Decide</button>` : ''}
+      </td>
+    </tr>`).join('') + `</tbody></table></div></div>`;
+  }
+
+  async function viewApp(id) {
+    document.getElementById('app-modal-body').innerHTML = `<div class="loading-overlay"><div class="spinner"></div></div>`;
+    document.getElementById('app-modal-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('appModal')">Close</button>`;
+    openModal('appModal');
+    try {
+      const a = await API.get(`/applications/${id}`);
+      document.getElementById('app-modal-title').textContent = `${a.employee_name} — ${a.posting_title}`;
+      document.getElementById('app-modal-body').innerHTML = `
+        ${buildTracker(a)}
+        <hr style="border:none;border-top:1px solid var(--light-gray);margin:20px 0">
+        <div class="detail-grid">
+          <div class="detail-item"><label>Applicant</label><p>${a.employee_name}</p></div>
+          <div class="detail-item"><label>Applying For</label><p>${a.posting_title} — ${a.school_name}</p></div>
+          <div class="detail-item"><label>Current School</label><p>${a.current_school}</p></div>
+          <div class="detail-item"><label>Current Position</label><p>${a.current_position}</p></div>
+          <div class="detail-item"><label>FTE</label><p>${a.fte}</p></div>
+          <div class="detail-item"><label>Date Applied</label><p>${formatDate(a.applied_date)}</p></div>
+          ${a.interview_date ? `<div class="detail-item"><label>Interview Date</label><p>${formatDate(a.interview_date)}</p></div>` : ''}
+        </div>
+        ${a.sending_decision ? `<div class="decision-box ${a.sending_decision} mt-4"><h4>Sending Principal: ${a.sending_decision === 'approved' ? '✓ Approved' : '✗ Denied'} ${a.sending_actor ? '— ' + a.sending_actor : ''}</h4>${a.sending_notes ? `<p>${a.sending_notes}</p>` : ''}<p style="font-size:.8rem;color:var(--gray)">${formatDate(a.sending_date)}</p></div>` : ''}
+        ${a.receiving_decision ? `<div class="decision-box ${a.receiving_decision} mt-4"><h4>Receiving Principal: ${a.receiving_decision === 'approved' ? '✓ Approved' : '✗ Denied'} ${a.receiving_actor ? '— ' + a.receiving_actor : ''}</h4>${a.receiving_notes ? `<p>${a.receiving_notes}</p>` : ''}<p style="font-size:.8rem;color:var(--gray)">${formatDate(a.receiving_date)}</p></div>` : ''}
+        ${a.hr_decision ? `<div class="decision-box ${a.hr_decision} mt-4"><h4>HR: ${a.hr_decision === 'approved' ? '✓ Transfer Approved' : '✗ Denied'} ${a.hr_actor ? '— ' + a.hr_actor : ''}</h4>${a.hr_notes ? `<p>${a.hr_notes}</p>` : ''}<p style="font-size:.8rem;color:var(--gray)">${formatDate(a.hr_date)}</p></div>` : ''}
+      `;
+      const footer = document.getElementById('app-modal-footer');
+      let btns = `<button class="btn btn-secondary" onclick="closeModal('appModal')">Close</button>`;
+      if (a.resume_drive_url) btns = `<a href="${a.resume_drive_url}" target="_blank" class="btn btn-info">📄 View Resume</a>` + btns;
+      if (a.status === 'pending_hr') btns += `<button class="btn btn-primary" onclick="closeModal('appModal');openHrDecision(${a.id},'${a.employee_name.replace(/'/g,"\\'")}','${a.posting_title.replace(/'/g,"\\'")}','${a.school_name.replace(/'/g,"\\'")}')">Make HR Decision</button>`;
+      footer.innerHTML = btns;
+    } catch {
+      document.getElementById('app-modal-body').innerHTML = `<div class="alert alert-error">Failed to load application details.</div>`;
+    }
+  }
+  window.viewApp = viewApp;
+
+  function openHrDecision(id, name, title, school) {
+    currentAppId = id;
+    document.getElementById('hr-modal-title').textContent = `Final Decision — ${name}`;
+    document.getElementById('hr-modal-info').innerHTML = `<strong>${name}</strong> is transferring to <strong>${title}</strong> at ${school}.<br>Both principals have approved. This is the final HR decision.`;
+    document.getElementById('hr-notes').value = '';
+    hideAlert('hr-alert');
+    openModal('hrModal');
+  }
+  window.openHrDecision = openHrDecision;
+
+  async function submitHrDecision(approved) {
+    const btn = approved ? document.getElementById('btn-hr-approve') : document.getElementById('btn-hr-deny');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+    hideAlert('hr-alert');
+    try {
+      await API.post(`/workflow/${currentAppId}/hr-decision`, { approved, notes: document.getElementById('hr-notes').value });
+      closeModal('hrModal');
+      loadApps();
+    } catch (err) {
+      showAlert('hr-alert', err.message);
+      btn.disabled = false; btn.textContent = approved ? 'Approve Transfer' : 'Deny Transfer';
+    }
+  }
+
+  document.getElementById('btn-hr-approve').addEventListener('click', () => submitHrDecision(true));
+  document.getElementById('btn-hr-deny').addEventListener('click', () => submitHrDecision(false));
+
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    const status = document.getElementById('statusFilter').value;
+    const token = localStorage.getItem('tc_token');
+    const url = `/api/export/applications${status ? '?status=' + status : ''}`;
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.blob()).then(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `transfer-applications-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+      });
+  });
+}
+</script>
+</body>
+</html>

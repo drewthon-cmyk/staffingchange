@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GCK Transfer Center — Full Preview</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brown:#2F2012;--gold:#F8B215;--green:#75C044;--blue:#37C5F1;
+  --orange:#F26E22;--gray:#6F655A;--light-gray:#D8D6CD;--white:#FEFEFE;
+  --shadow:0 2px 12px rgba(47,32,18,.12);--radius:10px;--sidebar-w:260px;
+  --font:'Segoe UI',system-ui,-apple-system,sans-serif;
+}
+html{font-size:16px}
+body{font-family:var(--font);background:var(--light-gray);color:var(--brown);min-height:100vh;line-height:1.6}
+
+/* ── Preview Nav Bar ─────────────────────────────────────────── */
+.preview-bar{background:#1a1a2e;padding:10px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:9999;box-shadow:0 2px 10px rgba(0,0,0,.4)}
+.preview-bar h1{color:#F8B215;font-size:.85rem;font-weight:700;letter-spacing:.05em;white-space:nowrap}
+.preview-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.preview-tab{background:rgba(255,255,255,.1);color:#ccc;border:none;padding:6px 14px;border-radius:20px;font-size:.8rem;cursor:pointer;transition:all .15s;font-family:var(--font)}
+.preview-tab:hover{background:rgba(248,178,21,.2);color:#F8B215}
+.preview-tab.active{background:#F8B215;color:#2F2012;font-weight:700}
+
+/* ── Auth ────────────────────────────────────────────────────── */
+.auth-page{min-height:calc(100vh - 44px);display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--brown) 0%,#4a3520 100%);padding:24px}
+.auth-card{background:var(--white);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.3);width:100%;max-width:440px;overflow:hidden}
+.auth-header{background:var(--brown);padding:32px;text-align:center}
+.auth-header img{height:80px;object-fit:contain;margin-bottom:16px}
+.auth-header h1{color:var(--gold);font-size:1.4rem;font-weight:700;margin-bottom:4px}
+.auth-header p{color:var(--light-gray);font-size:.9rem}
+.auth-body{padding:32px}
+.auth-body h2{font-size:1.25rem;color:var(--brown);margin-bottom:20px;font-weight:600}
+.auth-links{text-align:center;margin-top:20px}
+.auth-links a{color:var(--gray);font-size:.875rem;text-decoration:none;margin:0 8px}
+
+/* ── App Layout ──────────────────────────────────────────────── */
+.page{display:none;min-height:calc(100vh - 44px)}
+.page.active{display:block}
+.auth-page-wrap{display:none;min-height:calc(100vh - 44px)}
+.auth-page-wrap.active{display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--brown) 0%,#4a3520 100%);padding:24px}
+
+.app-layout{display:flex;min-height:calc(100vh - 44px)}
+.sidebar{width:var(--sidebar-w);background:var(--brown);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-logo{padding:24px 20px 16px;border-bottom:1px solid rgba(248,178,21,.2);text-align:center}
+.sidebar-logo img{height:56px;object-fit:contain}
+.sidebar-logo h2{color:var(--gold);font-size:.9rem;font-weight:600;margin-top:10px;line-height:1.3}
+.sidebar-logo p{color:var(--light-gray);font-size:.75rem;margin-top:2px}
+.sidebar-nav{flex:1;padding:16px 0;overflow-y:auto}
+.nav-section{padding:8px 16px 4px;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(216,214,205,.5)}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 20px;color:var(--light-gray);text-decoration:none;font-size:.925rem;border-left:3px solid transparent;cursor:pointer;transition:all .15s}
+.nav-item:hover{background:rgba(248,178,21,.1);color:var(--gold)}
+.nav-item.active{background:rgba(248,178,21,.15);color:var(--gold);border-left-color:var(--gold)}
+.nav-item .icon{width:20px;text-align:center;font-size:1rem;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--orange);color:var(--white);font-size:.7rem;font-weight:700;padding:1px 7px;border-radius:10px}
+.sidebar-footer{padding:16px 20px;border-top:1px solid rgba(248,178,21,.2)}
+.sidebar-user{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sidebar-avatar{width:36px;height:36px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--brown);font-size:.9rem;flex-shrink:0}
+.sidebar-user-name{color:var(--white);font-size:.875rem;font-weight:600}
+.sidebar-user-role{color:var(--light-gray);font-size:.75rem}
+.btn-logout{width:100%;background:rgba(242,110,34,.15);color:var(--orange);border:1px solid rgba(242,110,34,.3);padding:8px;border-radius:6px;cursor:pointer;font-size:.875rem;font-weight:500}
+
+/* ── Main Content ─────────────────────────────────────────────── */
+.main-content{flex:1;display:flex;flex-direction:column;min-width:0}
+.page-header{background:var(--white);padding:24px 32px;border-bottom:1px solid var(--light-gray);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.page-header h1{font-size:1.5rem;color:var(--brown);font-weight:700}
+.page-header p{color:var(--gray);font-size:.9rem;margin-top:2px}
+.page-body{padding:28px 32px;flex:1}
+
+/* ── Cards ───────────────────────────────────────────────────── */
+.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px}
+.card-header{padding:18px 24px;border-bottom:1px solid var(--light-gray);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card-header h2{font-size:1.05rem;color:var(--brown);font-weight:600}
+.card-body{padding:24px}
+
+/* ── Stats ───────────────────────────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--white);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);border-left:4px solid var(--light-gray)}
+.stat-card.gold{border-left-color:var(--gold)}.stat-card.green{border-left-color:var(--green)}
+.stat-card.blue{border-left-color:var(--blue)}.stat-card.orange{border-left-color:var(--orange)}
+.stat-card.gray{border-left-color:var(--gray)}.stat-card.brown{border-left-color:var(--brown)}
+.stat-number{font-size:2rem;font-weight:700;color:var(--brown);line-height:1}
+.stat-label{font-size:.825rem;color:var(--gray);margin-top:6px}
+
+/* ── Forms ───────────────────────────────────────────────────── */
+.form-group{margin-bottom:20px}
+.form-group label{display:block;font-size:.875rem;font-weight:600;color:var(--brown);margin-bottom:6px}
+.required{color:var(--orange);margin-left:2px}
+.form-control{width:100%;padding:11px 14px;border:1.5px solid var(--light-gray);border-radius:8px;font-size:1rem;color:var(--brown);background:var(--white);font-family:var(--font)}
+.form-control:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(248,178,21,.2)}
+.form-hint{font-size:.8rem;color:var(--gray);margin-top:4px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.file-upload-area{border:2px dashed var(--light-gray);border-radius:8px;padding:32px;text-align:center;cursor:pointer}
+.file-upload-area .upload-icon{font-size:2.5rem;color:var(--light-gray)}
+.file-upload-area p{color:var(--gray);margin-top:8px;font-size:.875rem}
+
+/* ── Buttons ──────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 20px;border-radius:8px;font-size:.925rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;text-decoration:none;white-space:nowrap;font-family:var(--font)}
+.btn-primary{background:var(--gold);color:var(--brown)}.btn-primary:hover{background:#e6a512}
+.btn-success{background:var(--green);color:var(--white)}.btn-success:hover{background:#62a839}
+.btn-danger{background:var(--orange);color:var(--white)}.btn-danger:hover{background:#d95e1a}
+.btn-info{background:var(--blue);color:var(--white)}
+.btn-secondary{background:var(--light-gray);color:var(--brown)}
+.btn-outline{background:transparent;color:var(--brown);border:1.5px solid var(--light-gray)}
+.btn-sm{padding:6px 14px;font-size:.825rem}.btn-lg{padding:14px 28px;font-size:1.05rem}.btn-full{width:100%}
+
+/* ── Tables ───────────────────────────────────────────────────── */
+.table-wrapper{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+table th{background:var(--light-gray);color:var(--brown);font-weight:700;padding:12px 16px;text-align:left;font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+table td{padding:13px 16px;border-bottom:1px solid var(--light-gray);vertical-align:middle}
+table tr:last-child td{border-bottom:none}
+table tr:hover td{background:rgba(216,214,205,.4)}
+
+/* ── Badges ───────────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:.78rem;font-weight:700;white-space:nowrap}
+.badge-pending{background:rgba(248,178,21,.15);color:#9a6e00}
+.badge-approved{background:rgba(117,192,68,.15);color:#4a8a1e}
+.badge-denied{background:rgba(242,110,34,.15);color:#c05010}
+.badge-open{background:rgba(55,197,241,.15);color:#1580a0}
+.badge-filled{background:rgba(117,192,68,.15);color:#4a8a1e}
+.badge-interview{background:rgba(55,197,241,.15);color:#1580a0}
+.badge-hr{background:rgba(47,32,18,.1);color:var(--brown)}
+
+/* ── Status Tracker ──────────────────────────────────────────── */
+.status-tracker{display:flex;align-items:flex-start;margin:24px 0}
+.tracker-step{flex:1;text-align:center;position:relative}
+.tracker-step::before{content:'';position:absolute;top:18px;left:-50%;right:50%;height:2px;background:var(--light-gray);z-index:0}
+.tracker-step:first-child::before{display:none}
+.tracker-step.complete::before{background:var(--green)}
+.tracker-step.active::before{background:var(--gold)}
+.tracker-dot{width:36px;height:36px;border-radius:50%;border:3px solid var(--light-gray);background:var(--white);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:1rem;position:relative;z-index:1}
+.tracker-step.complete .tracker-dot{background:var(--green);border-color:var(--green);color:var(--white)}
+.tracker-step.active .tracker-dot{background:var(--gold);border-color:var(--gold);color:var(--brown);box-shadow:0 0 0 4px rgba(248,178,21,.2)}
+.tracker-step.denied .tracker-dot{background:var(--orange);border-color:var(--orange);color:var(--white)}
+.tracker-label{font-size:.75rem;color:var(--gray);font-weight:500;line-height:1.3}
+.tracker-step.complete .tracker-label{color:var(--green);font-weight:600}
+.tracker-step.active .tracker-label{color:var(--brown);font-weight:700}
+.tracker-date{font-size:.7rem;color:var(--gray);margin-top:2px}
+
+/* ── Posting Cards ────────────────────────────────────────────── */
+.postings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+.posting-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;transition:transform .15s}
+.posting-card:hover{transform:translateY(-3px)}
+.posting-card-header{background:var(--brown);padding:16px 20px}
+.posting-card-header h3{color:var(--gold);font-size:1rem;font-weight:700}
+.posting-card-header p{color:var(--light-gray);font-size:.825rem;margin-top:2px}
+.posting-card-body{padding:18px 20px;flex:1}
+.posting-meta{display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap}
+.posting-meta-item{display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--gray)}
+.posting-card-footer{padding:14px 20px;border-top:1px solid var(--light-gray);display:flex;align-items:center;justify-content:space-between;gap:12px}
+
+/* ── Detail Grid ─────────────────────────────────────────────── */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.detail-item label{font-size:.78rem;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;display:block}
+.detail-item p{font-size:.95rem;color:var(--brown);font-weight:500;margin-top:2px}
+.decision-box{border-radius:8px;padding:16px;margin-top:12px}
+.decision-box.approved{background:rgba(117,192,68,.1);border:1px solid rgba(117,192,68,.3)}
+.decision-box.denied{background:rgba(242,110,34,.1);border:1px solid rgba(242,110,34,.3)}
+.decision-box.pending{background:rgba(248,178,21,.1);border:1px solid rgba(248,178,21,.3)}
+.decision-box h4{font-size:.9rem;font-weight:700;margin-bottom:4px}
+.decision-box.approved h4{color:var(--green)}.decision-box.denied h4{color:var(--orange)}.decision-box.pending h4{color:#9a6e00}
+
+/* ── Alert ───────────────────────────────────────────────────── */
+.alert{padding:12px 16px;border-radius:8px;font-size:.9rem;margin-bottom:16px}
+.alert-error{background:rgba(242,110,34,.1);color:#a03010;border:1px solid rgba(242,110,34,.3)}
+.alert-success{background:rgba(117,192,68,.1);color:#2e7010;border:1px solid rgba(117,192,68,.3)}
+.alert-info{background:rgba(55,197,241,.1);color:#0a6080;border:1px solid rgba(55,197,241,.3)}
+
+/* ── Modal ───────────────────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.3);width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
+.modal-header{padding:20px 24px;border-bottom:1px solid var(--light-gray);display:flex;align-items:center;justify-content:space-between}
+.modal-header h3{font-size:1.1rem;color:var(--brown);font-weight:700}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--gray);font-size:1.3rem;padding:4px}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--light-gray);display:flex;justify-content:flex-end;gap:10px}
+
+/* ── Empty State ─────────────────────────────────────────────── */
+.empty-state{text-align:center;padding:60px 20px;color:var(--gray)}
+.empty-icon{font-size:3rem;margin-bottom:12px;opacity:.5}
+
+/* ── Filter bar ──────────────────────────────────────────────── */
+.filter-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+.filter-bar .form-control{max-width:220px;padding:8px 12px}
+.text-gray{color:var(--gray)}.text-green{color:var(--green)}.mt-4{margin-top:16px}.mb-4{margin-bottom:16px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- ── Preview Navigation Bar ─────────────────────────────────── -->
+<div class="preview-bar">
+  <h1>🏫 GCK TRANSFER CENTER — PAGE PREVIEWS</h1>
+  <div class="preview-tabs">
+    <button class="preview-tab active" onclick="show('login')">Login</button>
+    <button class="preview-tab" onclick="show('register')">Register</button>
+    <button class="preview-tab" onclick="show('emp-dashboard')">Employee Dashboard</button>
+    <button class="preview-tab" onclick="show('postings')">Open Positions</button>
+    <button class="preview-tab" onclick="show('my-apps')">My Applications</button>
+    <button class="preview-tab" onclick="show('app-status')">Application Status</button>
+    <button class="preview-tab" onclick="show('principal-dashboard')">Principal Dashboard</button>
+    <button class="preview-tab" onclick="show('sending-approvals')">Sending Approvals</button>
+    <button class="preview-tab" onclick="show('receiving')">Receiving & Interviews</button>
+    <button class="preview-tab" onclick="show('hr-dashboard')">HR Dashboard</button>
+    <button class="preview-tab" onclick="show('hr-postings')">HR Postings</button>
+    <button class="preview-tab" onclick="show('hr-applications')">HR Applications</button>
+    <button class="preview-tab" onclick="show('hr-employees')">HR Employees</button>
+    <button class="preview-tab" onclick="show('hr-archive')">Archive</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGE: LOGIN
+═══════════════════════════════════════════════════════════════ -->
+<div class="page active" id="p-login">
+<div style="min-height:calc(100vh - 44px);display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#2F2012 0%,#4a3520 100%);padding:24px">
+  <div class="auth-card">
+    <div class="auth-header">
+      <img src="/assets/logo.svg" alt="USD 457 Logo" onerror="this.style.display='none'">
+      <h1>In-District Transfer Center</h1>
+      <p>Garden City Public Schools — USD 457</p>
+    </div>
+    <div class="auth-body">
+      <h2>Sign In to Your Account</h2>
+      <div class="form-group">
+        <label>Email Address <span class="required">*</span></label>
+        <input class="form-control" type="email" placeholder="you@gckschools.com">
+      </div>
+      <div class="form-group">
+        <label>Password <span class="required">*</span></label>
+        <input class="form-control" type="password" placeholder="Enter your password">
+      </div>
+      <button class="btn btn-primary btn-full btn-lg">Sign In</button>
+      <div class="auth-links">
+        <a href="#">Forgot your password?</a>
+        <a href="#">First time? Create account</a>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGE: REGISTER
+═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="p-register">
+<div style="min-height:calc(100vh - 44px);display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#2F2012 0%,#4a3520 100%);padding:24px">
+  <div class="auth-card">
+    <div class="auth-header">
+      <img src="/assets/logo.svg" alt="USD 457 Logo" onerror="this.style.display='none'">
+      <h1>Create Your Account</h1>
+      <p>Garden City Public Schools — USD 457</p>
+    </div>
+    <div class="auth-body">
+      <h2>Set Up Your Account</h2>
+      <div class="form-group"><label>District Email Address <span class="required">*</span></label><input class="form-control" placeholder="you@gckschools.com"><p class="form-hint">Your email must be pre-approved by HR to register.</p></div>
+      <div class="form-group"><label>Full Name <span class="required">*</span></label><input class="form-control" placeholder="First and last name"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Current School / Dept <span class="required">*</span></label><select class="form-control"><option>Garden City High School</option><option>Horace Good Middle School</option></select></div>
+        <div class="form-group"><label>Current Position <span class="required">*</span></label><input class="form-control" placeholder="e.g., 4th Grade Teacher"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Password <span class="required">*</span></label><input class="form-control" type="password" placeholder="Min 8 characters"></div>
+        <div class="form-group"><label>Confirm Password <span class="required">*</span></label><input class="form-control" type="password" placeholder="Repeat password"></div>
+      </div>
+      <button class="btn btn-primary btn-full btn-lg">Create Account</button>
+      <div class="auth-links"><a href="#">Already have an account? Sign in</a></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGE: EMPLOYEE DASHBOARD
+═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="p-emp-dashboard">
+<div class="app-layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" onerror="this.style.display='none'"><h2>Transfer Center</h2><p>USD 457</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Employee</div>
+      <div class="nav-item active"><span class="icon">🏠</span> Dashboard</div>
+      <div class="nav-item"><span class="icon">📋</span> Open Positions</div>
+      <div class="nav-item"><span class="icon">📁</span> My Applications</div>
+      <div class="nav-section">Account</div>
+      <div class="nav-item"><span class="icon">⚙️</span> Account Settings</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar">S</div>
+        <div><div class="sidebar-user-name">Sarah Johnson</div><div class="sidebar-user-role">Employee</div></div>
+      </div>
+      <button class="btn-logout">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header"><div><h1>Welcome Back</h1><p>Welcome, Sarah Johnson — Garden City Transfer Center</p></div><button class="btn btn-primary">Browse Open Positions</button></div>
+    <div class="page-body">
+      <div class="stats-grid">
+        <div class="stat-card blue"><div class="stat-number">2</div><div class="stat-label">Active Applications</div></div>
+        <div class="stat-card green"><div class="stat-number">1</div><div class="stat-label">Approved Transfers</div></div>
+        <div class="stat-card orange"><div class="stat-number">1</div><div class="stat-label">Awaiting Action</div></div>
+        <div class="stat-card gold"><div class="stat-number">4</div><div class="stat-label">Total Applications</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2>My Recent Applications</h2><button class="btn btn-outline btn-sm">View All</button></div>
+        <div class="table-wrapper"><table>
+          <thead><tr><th>Position</th><th>School</th><th>Applied</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><strong>4th Grade Teacher</strong></td><td>Alta Brown Elementary</td><td>Mar 15, 2026</td><td><span class="badge badge-interview">Interview Scheduled</span></td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
+            <tr><td><strong>Special Education Teacher</strong></td><td>Kenneth Henderson Middle School</td><td>Mar 8, 2026</td><td><span class="badge badge-pending">Awaiting Sending Principal</span></td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
+            <tr><td><strong>Instructional Coach</strong></td><td>Curriculum &amp; Instruction Dept.</td><td>Feb 20, 2026</td><td><span class="badge badge-approved">Transfer Approved</span></td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGE: OPEN POSITIONS
+═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="p-postings">
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" onerror="this.style.display='none'"><h2>Transfer Center</h2><p>USD 457</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Employee</div>
+      <div class="nav-item"><span class="icon">🏠</span> Dashboard</div>
+      <div class="nav-item active"><span class="icon">📋</span> Open Positions</div>
+      <div class="nav-item"><span class="icon">📁</span> My Applications</div>
+      <div class="nav-section">Account</div>
+      <div class="nav-item"><span class="icon">⚙️</span> Account Settings</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="sidebar-avatar">S</div><div><div class="sidebar-user-name">Sarah Johnson</div><div class="sidebar-user-role">Employee</div></div></div>
+      <button class="btn-logout">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header"><div><h1>Open Positions</h1><p>Available in-district transfer opportunities</p></div></div>
+    <div class="page-body">
+      <div class="filter-bar"><input class="form-control" placeholder="Search by title or school…" style="max-width:280px;padding:8px 12px"></div>
+      <div class="postings-grid">
+        <div class="posting-card"><div class="posting-card-header"><h3>4th Grade Teacher</h3><p>Alta Brown Elementary</p></div><div class="posting-card-body"><div class="posting-meta"><div class="posting-meta-item">📊 <span><strong>FTE:</strong> 1.0 FTE (Full Time)</span></div><div class="posting-meta-item">📅 <span>Posted Mar 1, 2026</span></div><div class="posting-meta-item">👤 <span>3 applicants</span></div></div><button class="btn btn-outline btn-sm">View Job Description</button></div><div class="posting-card-footer"><span class="badge badge-open">Open</span><button class="btn btn-primary btn-sm">Apply Now</button></div></div>
+        <div class="posting-card"><div class="posting-card-header"><h3>Special Education Teacher</h3><p>Kenneth Henderson Middle School</p></div><div class="posting-card-body"><div class="posting-meta"><div class="posting-meta-item">📊 <span><strong>FTE:</strong> 1.0 FTE (Full Time)</span></div><div class="posting-meta-item">📅 <span>Posted Feb 28, 2026</span></div><div class="posting-meta-item">👤 <span>5 applicants</span></div></div></div><div class="posting-card-footer"><span class="badge badge-open">Open</span><button class="btn btn-primary btn-sm">Apply Now</button></div></div>
+        <div class="posting-card"><div class="posting-card-header"><h3>School Counselor</h3><p>Garden City High School</p></div><div class="posting-card-body"><div class="posting-meta"><div class="posting-meta-item">📊 <span><strong>FTE:</strong> 1.0 FTE (Full Time)</span></div><div class="posting-meta-item">📅 <span>Posted Mar 5, 2026</span></div><div class="posting-meta-item">👤 <span>2 applicants</span></div></div><button class="btn btn-outline btn-sm">View Job Description</button></div><div class="posting-card-footer"><span class="badge badge-open">Open</span><button class="btn btn-primary btn-sm">Apply Now</button></div></div>
+        <div class="posting-card"><div class="posting-card-header"><h3>Paraprofessional</h3><p>Garfield Early Childhood Center</p></div><div class="posting-card-body"><div class="posting-meta"><div class="posting-meta-item">📊 <span><strong>FTE:</strong> 0.5 FTE (Half Time)</span></div><div class="posting-meta-item">📅 <span>Posted Mar 10, 2026</span></div></div></div><div class="posting-card-footer"><span class="badge badge-open">Open</span><button class="btn btn-primary btn-sm">Apply Now</button></div></div>
+        <div class="posting-card"><div class="posting-card-header"><h3>Instructional Coach</h3><p>Curriculum &amp; Instruction Department</p></div><div class="posting-card-body"><div class="posting-meta"><div class="posting-meta-item">📊 <span><strong>FTE:</strong> 1.0 FTE (Full Time)</span></div><div class="posting-meta-item">📅 <span>Posted Feb 20, 2026</span></div><div class="posting-meta-item">👤 <span>7 applicants</span></div></div></div><div class="posting-card-footer"><span class="badge badge-open">Open</span><button class="btn btn-primary btn-sm">Apply Now</button></div></div>
+        <div class="posting-card"><div class="posting-card-header"><h3>2nd Grade Teacher</h3><p>Buffalo Jones Elementary</p></div><div class="posting-card-body"><div class="posting-meta"><div class="posting-meta-item">📊 <span><strong>FTE:</strong> 1.0 FTE (Full Time)</span></div><div class="posting-meta-item">📅 <span>Posted Mar 12, 2026</span></div><div class="posting-meta-item">👤 <span>4 applicants</span></div></div></div><div class="posting-card-footer"><span class="badge badge-open">Open</span><button class="btn btn-primary btn-sm">Apply Now</button></div></div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGE: MY APPLICATIONS
+═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="p-my-apps">
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" onerror="this.style.display='none'"><h2>Transfer Center</h2><p>USD 457</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Employee</div>
+      <div class="nav-item"><span class="icon">🏠</span> Dashboard</div>
+      <div class="nav-item"><span class="icon">📋</span> Open Positions</div>
+      <div class="nav-item active"><span class="icon">📁</span> My Applications</div>
+      <div class="nav-section">Account</div>
+      <div class="nav-item"><span class="icon">⚙️</span> Account Settings</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="sidebar-avatar">S</div><div><div class="sidebar-user-name">Sarah Johnson</div><div class="sidebar-user-role">Employee</div></div></div>
+      <button class="btn-logout">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header"><div><h1>My Applications</h1><p>Track all of your transfer requests</p></div><button class="btn btn-primary">Apply for a Position</button></div>
+    <div class="page-body">
+      <!-- Application 1 -->
+      <div class="card">
+        <div class="card-header"><div><h2>4th Grade Teacher</h2><p class="text-gray">Alta Brown Elementary | FTE: 1.0 FTE (Full Time)</p></div><div style="display:flex;align-items:center;gap:10px"><span class="badge badge-interview">Interview Scheduled</span><button class="btn btn-outline btn-sm">Details</button></div></div>
+        <div class="card-body">
+          <div class="status-tracker">
+            <div class="tracker-step complete"><div class="tracker-dot">✓</div><div class="tracker-label">Application<br>Submitted</div><div class="tracker-date">Mar 15, 2026</div></div>
+            <div class="tracker-step complete"><div class="tracker-dot">✓</div><div class="tracker-label">Sending Principal<br>Approval</div><div class="tracker-date" style="font-weight:600;color:var(--green)">Approved</div></div>
+            <div class="tracker-step active"><div class="tracker-dot">📅</div><div class="tracker-label">Interview<br>Scheduled</div><div class="tracker-date">Apr 18, 2026</div></div>
+            <div class="tracker-step"><div class="tracker-dot">🏫</div><div class="tracker-label">Receiving Principal<br>Decision</div></div>
+            <div class="tracker-step"><div class="tracker-dot">✅</div><div class="tracker-label">HR Final<br>Approval</div></div>
+          </div>
+        </div>
+      </div>
+      <!-- Application 2 -->
+      <div class="card">
+        <div class="card-header"><div><h2>Special Education Teacher</h2><p class="text-gray">Kenneth Henderson Middle School | FTE: 1.0 FTE</p></div><div style="display:flex;align-items:center;gap:10px"><span class="badge badge-pending">Awaiting Sending Principal</span><button class="btn btn-outline btn-sm">Details</button></div></div>
+        <div class="card-body">
+          <div class="status-tracker">
+            <div class="tracker-step complete"><div class="tracker-dot">✓</div><div class="tracker-label">Application<br>Submitted</div><div class="tracker-date">Mar 8, 2026</div></div>
+            <div class="tracker-step active"><div class="tracker-dot">👤</div><div class="tracker-label">Sending Principal<br>Approval</div><div class="tracker-date">Pending review</div></div>
+            <div class="tracker-step"><div class="tracker-dot">📅</div><div class="tracker-label">Interview<br>Scheduled</div></div>
+            <div class="tracker-step"><div class="tracker-dot">🏫</div><div class="tracker-label">Receiving Principal<br>Decision</div></div>
+            <div class="tracker-step"><div class="tracker-dot">✅</div><div class="tracker-label">HR Final<br>Approval</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGE: APPLICATION STATUS DETAIL
+═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="p-app-status">
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" onerror="this.style.display='none'"><h2>Transfer Center</h2><p>USD 457</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Employee</div>
+      <div class="nav-item"><span class="icon">🏠</span> Dashboard</div>
+      <div class="nav-item"><span class="icon">📋</span> Open Positions</div>
+      <div class="nav-item active"><span class="icon">📁</span> My Applications</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="sidebar-avatar">S</div><div><div class="sidebar-user-name">Sarah Johnson</div><div class="sidebar-user-role">Employee</div></div></div>
+      <button class="btn-logout">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header"><div><h1>4th Grade Teacher</h1><p>Alta Brown Elementary | FTE: 1.0 FTE</p></div><button class="btn btn-secondary">← Back</button></div>
+    <div class="page-body">
+      <div class="card mb-4">
+        <div class="card-header"><h2>Transfer Progress</h2><span class="badge badge-interview">Interview Scheduled</span></div>
+        <div class="card-body">
+          <div class="status-tracker">
+            <div class="tracker-step complete"><div class="tracker-dot">✓</div><div class="tracker-label">Application<br>Submitted</div><div class="tracker-date">Mar 15, 2026</div></div>
+            <div class="tracker-step complete"><div class="tracker-dot">✓</div><div class="tracker-label">Sending Principal<br>Approval</div><div class="tracker-date" style="color:var(--green);font-weight:600">Approved</div></div>
+            <div class="tracker-step active"><div class="tracker-dot">📅</div><div class="tracker-label">Interview<br>Scheduled</div><div class="tracker-date">Apr 18, 2026</div></div>
+            <div class="tracker-step"><div class="tracker-dot">🏫</div><div class="tracker-label">Receiving Principal<br>Decision</div></div>
+            <div class="tracker-step"><div class="tracker-dot">✅</div><div class="tracker-label">HR Final<br>Approval</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div class="card">
+          <div class="card-header"><h2>Application Details</h2></div>
+          <div class="card-body">
+            <div class="detail-grid">
+              <div class="detail-item"><label>Applicant Name</label><p>Sarah Johnson</p></div>
+              <div class="detail-item"><label>Applying For</label><p>4th Grade Teacher — Alta Brown Elementary</p></div>
+              <div class="detail-item"><label>Current School</label><p>Horace Good Middle School</p></div>
+              <div class="detail-item"><label>Current Position</label><p>6th Grade Science Teacher</p></div>
+              <div class="detail-item"><label>FTE</label><p>1.0 FTE (Full Time)</p></div>
+              <div class="detail-item"><label>Date Applied</label><p>Mar 15, 2026</p></div>
+              <div class="detail-item"><label>Interview Date</label><p>Apr 18, 2026</p></div>
+            </div>
+            <button class="btn btn-outline btn-sm mt-4">📄 View Resume</button>
+            <button class="btn btn-outline btn-sm mt-4" style="margin-left:8px">📝 Job Description</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>Decision History</h2></div>
+          <div class="card-body">
+            <div class="decision-box approved"><h4>Sending Principal: ✓ Approved</h4><p style="font-size:.8rem;color:var(--gray)">Mar 17, 2026 — Principal M. Torres</p></div>
+            <div class="decision-box approved" style="margin-top:10px"><h4>📅 Interview Scheduled: Apr 18, 2026</h4></div>
+            <div class="decision-box pending" style="margin-top:10px"><h4>Receiving Principal: Pending Decision</h4><p style="font-size:.875rem">Awaiting decision following interview.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGE: PRINCIPAL DASHBOARD
+═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="p-principal-dashboard">
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" onerror="this.style.display='none'"><h2>Transfer Center</h2><p>USD 457 — Administrator</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Administrator</div>
+      <div class="nav-item active"><span class="icon">🏠</span> Dashboard</div>
+      <div class="nav-item"><span class="icon">📤</span> Sending Approvals <span class="nav-badge">3</span></div>
+      <div class="nav-item"><span class="icon">📥</span> Receiving &amp; Interviews <span class="nav-badge">2</span></div>
+      <div class="nav-section">Account</div>
+      <div class="nav-item"><span class="icon">⚙️</span> Account Settings</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="sidebar-avatar">M</div><div><div class="sidebar-user-name">Maria Torres</div><div class="sidebar-user-role">Administrator / Principal</div></div></div>
+      <button class="btn-logout">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header"><div><h1>Administrator Dashboard</h1><p>Horace Good Middle School</p></div></div>
+    <div class="page-body">
+      <div class="stats-grid">
+        <div class="stat-card orange"><div class="stat-number">3</div><div class="stat-label">Pending Sending Approvals</div></div>
+        <div class="stat-card blue"><div class="stat-number">2</div><div class="stat-label">Pending Receiving / Interviews</div></div>
+      </div>
+      <div class="card mb-4">
+        <div class="card-header"><h2>Employees Requesting to Leave Your Building</h2><button class="btn btn-outline btn-sm">View All</button></div>
+        <div class="table-wrapper"><table>
+          <thead><tr><th>Employee</th><th>Current Position</th><th>Applying For</th><th>School</th><th>Date Applied</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><strong>Sarah Johnson</strong></td><td>6th Grade Science</td><td>4th Grade Teacher</td><td>Alta Brown Elementary</td><td>Mar 15, 2026</td><td><button class="btn btn-primary btn-sm">Review</button></td></tr>
+            <tr><td><strong>Derek Williams</strong></td><td>7th Grade Math</td><td>Instructional Coach</td><td>Curriculum &amp; Instruction</td><td>Mar 8, 2026</td><td><button class="btn btn-primary btn-sm">Review</button></td></tr>
+            <tr><td><strong>Amanda Chen</strong></td><td>School Counselor</td><td>School Counselor</td><td>Garden City High School</td><td>Mar 10, 2026</td><td><button class="btn btn-primary btn-sm">Review</button></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2>Applicants for Positions at Your Building</h2><button class="btn btn-outline btn-sm">View All</button></div>
+        <div class="table-wrapper"><table>
+          <thead><tr><th>Employee</th><th>Current Position</th><th>Applying For</th><th>Date Applied</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><strong>James Rivera</strong></td><td>5th Grade Teacher</td><td>6th Grade Science Teacher</td><td>Feb 25, 2026</td><td><button class="btn btn-primary btn-sm">Review</button></td></tr>
+            <tr><td><strong>Lisa Park</strong></td><td>Special Ed Paraprofessional</td><td>6th Grade Science Teacher</td><td>Feb 27, 2026</td><td><button class="btn btn-primary btn-sm">Review</button></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGE: SENDING APPROVALS
+═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="p-sending-approvals">
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" onerror="this.style.display='none'"><h2>Transfer Center</h2><p>USD 457 — Administrator</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Administrator</div>
+      <div class="nav-item"><span class="icon">🏠</span> Dashboard</div>
+      <div class="nav-item active"><span class="icon">📤</span> Sending Approvals</div>
+      <div class="nav-item"><span class="icon">📥</span> Receiving &amp; Interviews</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="sidebar-avatar">M</div><div><div class="sidebar-user-name">Maria Torres</div><div class="sidebar-user-role">Administrator / Principal</div></div></div>
+      <button class="btn-logout">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header"><div><h1>Sending Approvals</h1><p>Employees from your building requesting a transfer</p></div></div>
+    <div class="page-body">
+      <div class="filter-bar"><select class="form-control"><option>Pending My Review</option><option>All</option><option>Denied by Me</option></select></div>
+      <div class="card">
+        <div class="table-wrapper"><table>
+          <thead><tr><th>Employee</th><th>Current Position</th><th>Applying For</th><th>School</th><th>Date Applied</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><strong>Sarah Johnson</strong></td><td>6th Grade Science Teacher</td><td>4th Grade Teacher</td><td>Alta Brown Elementary</td><td>Mar 15, 2026</td><td><span class="badge badge-pending">Pending Review</span></td><td><button class="btn btn-primary btn-sm" onclick="document.getElementById('approvalModal').classList.add('open')">Review</button></td></tr>
+            <tr><td><strong>Derek Williams</strong></td><td>7th Grade Math Teacher</td><td>Instructional Coach</td><td>Curriculum &amp; Instruction</td><td>Mar 8, 2026</td><td><span class="badge badge-pending">Pending Review</span></td><td><button class="btn btn-primary btn-sm">Review</button></td></tr>
+            <tr><td><strong>Amanda Chen</strong></td><td>School Counselor</td><td>School Counselor</td><td>Garden City High School</td><td>Mar 10, 2026</td><td><span class="badge badge-pending">Pending Review</span></td><td><button class="btn btn-primary btn-sm">Review</button></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </main>
+</div>
+<!-- Approval Modal -->
+<div class="modal-overlay" id="approvalModal">
+  <div class="modal">
+    <div class="modal-header"><h3>Review: Sarah Johnson</h3><button class="modal-close" onclick="document.getElementById('approvalModal').classList.remove('open')">✕</button></div>
+    <div class="modal-body">
+      <div style="background:var(--light-gray);border-radius:8px;padding:14px;margin-bottom:20px;font-size:.9rem"><strong>Sarah Johnson</strong> is requesting to transfer to:<br><strong>4th Grade Teacher</strong> at Alta Brown Elementary<br><a href="#" style="color:var(--blue)">📄 View Resume</a></div>
+      <div class="form-group"><label>Notes (optional — included in notification emails)</label><textarea class="form-control" rows="3" placeholder="Add any comments for the employee or HR…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('approvalModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-danger">Deny Transfer</button>
+      <button class="btn btn-success">Approve Transfer</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGE: RECEIVING & INTERVIEWS
+═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="p-receiving">
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" onerror="this.style.display='none'"><h2>Transfer Center</h2><p>USD 457 — Administrator</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Administrator</div>
+      <div class="nav-item"><span class="icon">🏠</span> Dashboard</div>
+      <div class="nav-item"><span class="icon">📤</span> Sending Approvals</div>
+      <div class="nav-item active"><span class="icon">📥</span> Receiving &amp; Interviews</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="sidebar-avatar">M</div><div><div class="sidebar-user-name">Maria Torres</div><div class="sidebar-user-role">Administrator / Principal</div></div></div>
+      <button class="btn-logout">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header"><div><h1>Receiving &amp; Interviews</h1><p>Applicants for open positions at your building</p></div></div>
+    <div class="page-body">
+      <div class="card mb-4">
+        <div class="card-header"><h2>6th Grade Science Teacher</h2></div>
+        <div class="table-wrapper"><table>
+          <thead><tr><th>Applicant</th><th>Current School</th><th>Current Position</th><th>Applied</th><th>Interview</th><th>Resume</th><th>Actions</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>James Rivera</strong></td><td>Victor Ornelas Elementary</td><td>5th Grade Teacher</td><td>Feb 25, 2026</td>
+              <td><span style="color:var(--orange)">Not scheduled</span></td>
+              <td><button class="btn btn-outline btn-sm">📄 Resume</button></td>
+              <td><button class="btn btn-info btn-sm">Schedule Interview</button></td>
+            </tr>
+            <tr>
+              <td><strong>Lisa Park</strong></td><td>Plymell Elementary</td><td>Special Ed Paraprofessional</td><td>Feb 27, 2026</td>
+              <td><strong>Apr 16, 2026</strong></td>
+              <td><button class="btn btn-outline btn-sm">📄 Resume</button></td>
+              <td style="white-space:nowrap">
+                <button class="btn btn-info btn-sm">Reschedule</button>
+                <button class="btn btn-success btn-sm" style="margin-left:4px">Approve</button>
+                <button class="btn btn-danger btn-sm" style="margin-left:4px">Deny</button>
+              </td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGE: HR DASHBOARD
+═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="p-hr-dashboard">
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" onerror="this.style.display='none'"><h2>Transfer Center</h2><p>USD 457 — HR Admin</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">HR Administration</div>
+      <div class="nav-item active"><span class="icon">🏠</span> Dashboard</div>
+      <div class="nav-item"><span class="icon">📋</span> Job Postings</div>
+      <div class="nav-item"><span class="icon">📁</span> All Applications</div>
+      <div class="nav-item"><span class="icon">👥</span> Employees</div>
+      <div class="nav-item"><span class="icon">🗄️</span> Archive</div>
+      <div class="nav-section">Account</div>
+      <div class="nav-item"><span class="icon">⚙️</span> Account Settings</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="sidebar-avatar">H</div><div><div class="sidebar-user-name">HR Personnel</div><div class="sidebar-user-role">HR Administrator</div></div></div>
+      <button class="btn-logout">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header"><div><h1>HR Dashboard</h1><p>Garden City Public Schools Transfer Center</p></div><div style="display:flex;gap:10px"><button class="btn btn-primary">+ New Posting</button><button class="btn btn-secondary">Export CSV</button></div></div>
+    <div class="page-body">
+      <div class="stats-grid">
+        <div class="stat-card blue"><div class="stat-number">11</div><div class="stat-label">Open Positions</div></div>
+        <div class="stat-card gold"><div class="stat-number">47</div><div class="stat-label">Total Applications</div></div>
+        <div class="stat-card orange"><div class="stat-number">12</div><div class="stat-label">Awaiting Sending Principal</div></div>
+        <div class="stat-card blue"><div class="stat-number">8</div><div class="stat-label">Awaiting Interview</div></div>
+        <div class="stat-card gold"><div class="stat-number">5</div><div class="stat-label">Awaiting HR Approval</div></div>
+        <div class="stat-card green"><div class="stat-number">14</div><div class="stat-label">Transfers Approved</div></div>
+        <div class="stat-card gray"><div class="stat-number">8</div><div class="stat-label">Total Denied</div></div>
+        <div class="stat-card brown"><div class="stat-number">138</div><div class="stat-label">Registered Employees</div></div>
+      </div>
+      <div class="card mb-4">
+        <div class="card-header"><h2>⚡ Awaiting Your Final Approval</h2><button class="btn btn-outline btn-sm">View All</button></div>
+        <div class="table-wrapper"><table>
+          <thead><tr><th>Applicant</th><th>Position</th><th>School</th><th>Applied</th><th>Interview</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><strong>James Rivera</strong><br><small class="text-gray">Victor Ornelas Elementary</small></td><td>6th Grade Science Teacher</td><td>Horace Good Middle School</td><td>Feb 25, 2026</td><td>Apr 16, 2026</td><td><span class="badge badge-hr">Awaiting HR</span></td><td style="white-space:nowrap"><button class="btn btn-outline btn-sm">View</button> <button class="btn btn-primary btn-sm">Decide</button></td></tr>
+            <tr><td><strong>Lisa Park</strong><br><small class="text-gray">Plymell Elementary</small></td><td>4th Grade Teacher</td><td>Alta Brown Elementary</td><td>Mar 1, 2026</td><td>Apr 10, 2026</td><td><span class="badge badge-hr">Awaiting HR</span></td><td style="white-space:nowrap"><button class="btn btn-outline btn-sm">View</button> <button class="btn btn-primary btn-sm">Decide</button></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGE: HR POSTINGS
+═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="p-hr-postings">
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" onerror="this.style.display='none'"><h2>Transfer Center</h2><p>USD 457 — HR Admin</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">HR Administration</div>
+      <div class="nav-item"><span class="icon">🏠</span> Dashboard</div>
+      <div class="nav-item active"><span class="icon">📋</span> Job Postings</div>
+      <div class="nav-item"><span class="icon">📁</span> All Applications</div>
+      <div class="nav-item"><span class="icon">👥</span> Employees</div>
+      <div class="nav-item"><span class="icon">🗄️</span> Archive</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="sidebar-avatar">H</div><div><div class="sidebar-user-name">HR Personnel</div><div class="sidebar-user-role">HR Administrator</div></div></div>
+      <button class="btn-logout">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header"><div><h1>Job Postings</h1><p>Manage open transfer positions</p></div><button class="btn btn-primary">+ New Posting</button></div>
+    <div class="page-body">
+      <div class="filter-bar">
+        <select class="form-control"><option>Open</option><option>Filled</option><option>Closed</option></select>
+        <button class="btn btn-secondary btn-sm">Export CSV</button>
+      </div>
+      <div class="card">
+        <div class="table-wrapper"><table>
+          <thead><tr><th>Position Title</th><th>School / Department</th><th>FTE</th><th>Posted</th><th>Applicants</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            <tr><td><strong>4th Grade Teacher</strong></td><td>Alta Brown Elementary</td><td>1.0 FTE</td><td>Mar 1, 2026</td><td>3</td><td><span class="badge badge-open">Open</span></td><td><button class="btn btn-outline btn-sm">Edit</button> <button class="btn btn-danger btn-sm">Close</button></td></tr>
+            <tr><td><strong>Special Education Teacher</strong></td><td>Kenneth Henderson Middle School</td><td>1.0 FTE</td><td>Feb 28, 2026</td><td>5</td><td><span class="badge badge-open">Open</span></td><td><button class="btn btn-outline btn-sm">Edit</button> <button class="btn btn-danger btn-sm">Close</button></td></tr>
+            <tr><td><strong>School Counselor</strong></td><td>Garden City High School</td><td>1.0 FTE</td><td>Mar 5, 2026</td><td>2</td><td><span class="badge badge-open">Open</span></td><td><button class="btn btn-outline btn-sm">Edit</button> <button class="btn btn-danger btn-sm">Close</button></td></tr>
+            <tr><td><strong>6th Grade Science Teacher</strong></td><td>Horace Good Middle School</td><td>1.0 FTE</td><td>Feb 20, 2026</td><td>2</td><td><span class="badge badge-filled">Filled</span></td><td><button class="btn btn-outline btn-sm">Edit</button></td></tr>
+            <tr><td><strong>Instructional Coach</strong></td><td>Curriculum &amp; Instruction Dept.</td><td>1.0 FTE</td><td>Feb 15, 2026</td><td>7</td><td><span class="badge badge-open">Open</span></td><td><button class="btn btn-outline btn-sm">Edit</button> <button class="btn btn-danger btn-sm">Close</button></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGE: HR ALL APPLICATIONS
+═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="p-hr-applications">
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" onerror="this.style.display='none'"><h2>Transfer Center</h2><p>USD 457 — HR Admin</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">HR Administration</div>
+      <div class="nav-item"><span class="icon">🏠</span> Dashboard</div>
+      <div class="nav-item"><span class="icon">📋</span> Job Postings</div>
+      <div class="nav-item active"><span class="icon">📁</span> All Applications</div>
+      <div class="nav-item"><span class="icon">👥</span> Employees</div>
+      <div class="nav-item"><span class="icon">🗄️</span> Archive</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="sidebar-avatar">H</div><div><div class="sidebar-user-name">HR Personnel</div><div class="sidebar-user-role">HR Administrator</div></div></div>
+      <button class="btn-logout">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header"><div><h1>All Applications</h1><p>Review and manage every transfer request</p></div><button class="btn btn-secondary">Export CSV</button></div>
+    <div class="page-body">
+      <div class="filter-bar">
+        <input class="form-control" placeholder="Search applicant or position…" style="max-width:280px;padding:8px 12px">
+        <select class="form-control"><option>All Statuses</option><option>Awaiting Sending Principal</option><option>Interview Scheduled</option><option>Awaiting HR</option><option>Approved</option></select>
+      </div>
+      <div class="card">
+        <div class="table-wrapper"><table>
+          <thead><tr><th>Applicant</th><th>From</th><th>Position</th><th>To School</th><th>Applied</th><th>Interview</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><strong>James Rivera</strong><br><small class="text-gray">5th Grade Teacher</small></td><td>Victor Ornelas Elem.</td><td>6th Grade Science</td><td>Horace Good MS</td><td>Feb 25</td><td>Apr 16</td><td><span class="badge badge-hr">Awaiting HR</span></td><td><button class="btn btn-outline btn-sm">View</button> <button class="btn btn-primary btn-sm">Decide</button></td></tr>
+            <tr><td><strong>Sarah Johnson</strong><br><small class="text-gray">6th Grade Science</small></td><td>Horace Good MS</td><td>4th Grade Teacher</td><td>Alta Brown Elem.</td><td>Mar 15</td><td>Apr 18</td><td><span class="badge badge-interview">Interview Scheduled</span></td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
+            <tr><td><strong>Derek Williams</strong><br><small class="text-gray">7th Grade Math</small></td><td>Horace Good MS</td><td>Instructional Coach</td><td>Curriculum &amp; Instruction</td><td>Mar 8</td><td>—</td><td><span class="badge badge-pending">Awaiting Sending Principal</span></td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
+            <tr><td><strong>Amanda Chen</strong><br><small class="text-gray">School Counselor</small></td><td>Horace Good MS</td><td>School Counselor</td><td>Garden City HS</td><td>Mar 10</td><td>—</td><td><span class="badge badge-pending">Awaiting Sending Principal</span></td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
+            <tr><td><strong>Lisa Park</strong><br><small class="text-gray">Special Ed Para</small></td><td>Plymell Elem.</td><td>4th Grade Teacher</td><td>Alta Brown Elem.</td><td>Mar 1</td><td>Apr 10</td><td><span class="badge badge-hr">Awaiting HR</span></td><td><button class="btn btn-outline btn-sm">View</button> <button class="btn btn-primary btn-sm">Decide</button></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGE: HR EMPLOYEES
+═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="p-hr-employees">
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" onerror="this.style.display='none'"><h2>Transfer Center</h2><p>USD 457 — HR Admin</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">HR Administration</div>
+      <div class="nav-item"><span class="icon">🏠</span> Dashboard</div>
+      <div class="nav-item"><span class="icon">📋</span> Job Postings</div>
+      <div class="nav-item"><span class="icon">📁</span> All Applications</div>
+      <div class="nav-item active"><span class="icon">👥</span> Employees</div>
+      <div class="nav-item"><span class="icon">🗄️</span> Archive</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="sidebar-avatar">H</div><div><div class="sidebar-user-name">HR Personnel</div><div class="sidebar-user-role">HR Administrator</div></div></div>
+      <button class="btn-logout">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header"><div><h1>Employee Management</h1><p>Pre-load employee emails and manage access</p></div><div style="display:flex;gap:10px"><button class="btn btn-secondary">Upload CSV</button><button class="btn btn-primary">+ Add Employee</button></div></div>
+    <div class="page-body">
+      <div class="card mb-4">
+        <div class="card-header"><h2>Principal / Administrator Directory</h2></div>
+        <div class="card-body">
+          <p style="color:var(--gray);font-size:.9rem;margin-bottom:16px">Upload a CSV to assign principals to buildings. Required columns: <strong>name</strong>, <strong>principal_name</strong>, <strong>principal_email</strong></p>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <input type="file" accept=".csv" class="form-control" style="max-width:320px">
+            <button class="btn btn-primary">Upload Principal CSV</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2>Registered Employees</h2><input class="form-control" placeholder="Search by name or email…" style="max-width:260px;padding:8px 12px"></div>
+        <div class="table-wrapper"><table>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Current School</th><th>Status</th><th>Last Login</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><strong>Sarah Johnson</strong></td><td>sjohnson@gckschools.com</td><td><span class="badge badge-pending">Employee</span></td><td>Horace Good Middle School</td><td><span class="badge badge-approved">Active</span></td><td>Apr 11, 2026</td><td><button class="btn btn-outline btn-sm">Edit</button></td></tr>
+            <tr><td><strong>Maria Torres</strong></td><td>mtorres@gckschools.com</td><td><span class="badge badge-interview">Principal</span></td><td>Horace Good Middle School</td><td><span class="badge badge-approved">Active</span></td><td>Apr 11, 2026</td><td><button class="btn btn-outline btn-sm">Edit</button></td></tr>
+            <tr><td><strong>Derek Williams</strong></td><td>dwilliams@gckschools.com</td><td><span class="badge badge-pending">Employee</span></td><td>Horace Good Middle School</td><td><span class="badge badge-approved">Active</span></td><td>Apr 10, 2026</td><td><button class="btn btn-outline btn-sm">Edit</button></td></tr>
+            <tr><td><em style="color:var(--gray)">Not registered</em></td><td>jsmith@gckschools.com</td><td><span class="badge badge-pending">Employee</span></td><td>—</td><td><span class="badge badge-approved">Active</span></td><td>—</td><td><button class="btn btn-outline btn-sm">Edit</button></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGE: HR ARCHIVE
+═══════════════════════════════════════════════════════════════ -->
+<div class="page" id="p-hr-archive">
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" onerror="this.style.display='none'"><h2>Transfer Center</h2><p>USD 457 — HR Admin</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">HR Administration</div>
+      <div class="nav-item"><span class="icon">🏠</span> Dashboard</div>
+      <div class="nav-item"><span class="icon">📋</span> Job Postings</div>
+      <div class="nav-item"><span class="icon">📁</span> All Applications</div>
+      <div class="nav-item"><span class="icon">👥</span> Employees</div>
+      <div class="nav-item active"><span class="icon">🗄️</span> Archive</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="sidebar-avatar">H</div><div><div class="sidebar-user-name">HR Personnel</div><div class="sidebar-user-role">HR Administrator</div></div></div>
+      <button class="btn-logout">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header"><div><h1>Archive</h1><p>Completed, denied, and closed transfer records</p></div><button class="btn btn-secondary">Export CSV</button></div>
+    <div class="page-body">
+      <div class="card mb-4">
+        <div class="card-body" style="padding:16px 24px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;align-items:end">
+            <div class="form-group" style="margin:0"><label>Search</label><input class="form-control" placeholder="Name, position, school…"></div>
+            <div class="form-group" style="margin:0"><label>Outcome</label><select class="form-control"><option>All Outcomes</option><option>Transfer Approved</option><option>Denied by HR</option><option>Denied — Sending Principal</option></select></div>
+            <div class="form-group" style="margin:0"><label>From Date</label><input type="date" class="form-control"></div>
+            <div class="form-group" style="margin:0"><label>To Date</label><input type="date" class="form-control"></div>
+            <button class="btn btn-primary">Search</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <p style="padding:12px 24px 0;font-size:.85rem;color:var(--gray)">18 records found</p>
+        <div class="table-wrapper"><table>
+          <thead><tr><th>Applicant</th><th>From</th><th>Position</th><th>To School</th><th>Applied</th><th>Interview</th><th>Outcome</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><strong>Lisa Park</strong><br><small class="text-gray">Special Ed Para</small></td><td>Plymell Elem.</td><td>Instructional Coach</td><td>Curriculum &amp; Instruction</td><td>Jan 10, 2026</td><td>Jan 22, 2026</td><td><span class="badge badge-approved">Transfer Approved</span></td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
+            <tr><td><strong>Tom Garcia</strong><br><small class="text-gray">Custodian</small></td><td>Alta Brown Elem.</td><td>Head Custodian</td><td>Garden City HS</td><td>Jan 5, 2026</td><td>—</td><td><span class="badge badge-denied">Denied — Sending Principal</span></td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
+            <tr><td><strong>Nina Patel</strong><br><small class="text-gray">2nd Grade Teacher</small></td><td>Buffalo Jones Elem.</td><td>Reading Specialist</td><td>Curriculum &amp; Instruction</td><td>Dec 15, 2025</td><td>Jan 8, 2026</td><td><span class="badge badge-approved">Transfer Approved</span></td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
+            <tr><td><strong>Carlos Reyes</strong><br><small class="text-gray">PE Teacher</small></td><td>Georgia Matthews Elem.</td><td>Athletic Director Asst.</td><td>Garden City HS</td><td>Dec 10, 2025</td><td>Jan 5, 2026</td><td><span class="badge badge-denied">Denied by HR</span></td><td><button class="btn btn-outline btn-sm">View</button></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<script>
+const pageMap = {
+  'login':'p-login','register':'p-register','emp-dashboard':'p-emp-dashboard',
+  'postings':'p-postings','my-apps':'p-my-apps','app-status':'p-app-status',
+  'principal-dashboard':'p-principal-dashboard','sending-approvals':'p-sending-approvals',
+  'receiving':'p-receiving','hr-dashboard':'p-hr-dashboard','hr-postings':'p-hr-postings',
+  'hr-applications':'p-hr-applications','hr-employees':'p-hr-employees','hr-archive':'p-hr-archive'
+};
+
+function show(key) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
+  const page = document.getElementById(pageMap[key]);
+  if (page) page.classList.add('active');
+  event.target.classList.add('active');
+  window.scrollTo(0,0);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Application Status — GCK Transfer Center</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<button class="sidebar-toggle">☰</button>
+<div class="sidebar-overlay"></div>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" alt="USD 457"><h2>Transfer Center</h2><p>USD 457</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Employee</div>
+      <a href="/dashboard.html" class="nav-item"><span class="icon">🏠</span> Dashboard</a>
+      <a href="/postings.html" class="nav-item"><span class="icon">📋</span> Open Positions</a>
+      <a href="/my-applications.html" class="nav-item"><span class="icon">📁</span> My Applications</a>
+      <div class="nav-section">Account</div>
+      <a href="/account.html" class="nav-item"><span class="icon">⚙️</span> Account Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar">?</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebar-name">Loading…</div>
+          <div class="sidebar-user-role" id="sidebar-role">Employee</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <h1 id="page-title">Application Status</h1>
+        <p id="page-sub">Loading…</p>
+      </div>
+      <a href="/my-applications.html" class="btn btn-secondary">← Back</a>
+    </div>
+    <div class="page-body" id="page-body">
+      <div class="loading-overlay"><div class="spinner"></div><p>Loading application…</p></div>
+    </div>
+  </main>
+</div>
+<script src="/js/app.js"></script>
+<script>
+const user = requireAuth();
+if (user) {
+  initSidebar(user);
+  const id = new URLSearchParams(location.search).get('id');
+  if (!id) { location.href = '/my-applications.html'; }
+
+  API.get(`/applications/${id}`).then(a => {
+    document.getElementById('page-title').textContent = a.posting_title;
+    document.getElementById('page-sub').textContent = `${a.school_name} | FTE: ${a.fte}`;
+
+    const body = document.getElementById('page-body');
+    body.innerHTML = `
+      <div class="card mb-4">
+        <div class="card-header">
+          <h2>Transfer Progress</h2>
+          ${statusLabel(a.status)}
+        </div>
+        <div class="card-body">
+          ${buildTracker(a)}
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" class="detail-cols">
+        <div class="card">
+          <div class="card-header"><h2>Application Details</h2></div>
+          <div class="card-body">
+            <div class="detail-grid">
+              <div class="detail-item"><label>Applicant Name</label><p>${a.employee_name}</p></div>
+              <div class="detail-item"><label>Current School</label><p>${a.current_school}</p></div>
+              <div class="detail-item"><label>Current Position</label><p>${a.current_position}</p></div>
+              <div class="detail-item"><label>Date Applied</label><p>${formatDate(a.applied_date)}</p></div>
+              <div class="detail-item"><label>Applying To</label><p>${a.school_name}</p></div>
+              <div class="detail-item"><label>FTE</label><p>${a.fte}</p></div>
+            </div>
+            ${a.resume_drive_url ? `<a href="${a.resume_drive_url}" target="_blank" class="btn btn-outline btn-sm mt-4">📄 View Resume</a>` : ''}
+            ${a.job_description_url ? `<a href="${a.job_description_url}" target="_blank" class="btn btn-outline btn-sm mt-4" style="margin-left:8px">📝 Job Description</a>` : ''}
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h2>Decision History</h2></div>
+          <div class="card-body">
+            ${a.sending_decision ? `
+              <div class="decision-box ${a.sending_decision}">
+                <h4>Sending Principal: ${a.sending_decision === 'approved' ? '✓ Approved' : '✗ Denied'}</h4>
+                <p style="font-size:.8rem;color:var(--gray)">${formatDate(a.sending_date)}</p>
+                ${a.sending_notes ? `<p style="margin-top:6px">${a.sending_notes}</p>` : ''}
+              </div>
+            ` : `<div class="decision-box pending"><h4>Sending Principal: Pending Review</h4></div>`}
+
+            ${a.interview_date ? `
+              <div class="decision-box approved" style="margin-top:10px">
+                <h4>📅 Interview: ${formatDate(a.interview_date)}</h4>
+              </div>
+            ` : (a.status !== 'pending_sending_principal' && a.status !== 'sending_denied' ? `<div class="decision-box pending" style="margin-top:10px"><h4>Interview: Pending Schedule</h4></div>` : '')}
+
+            ${['pending_receiving_principal','receiving_denied','receiving_approved','pending_hr','hr_approved','hr_denied'].some(s => a.status === s) || a.receiving_decision ? `
+              <div class="decision-box ${a.receiving_decision || 'pending'}" style="margin-top:10px">
+                <h4>Receiving Principal: ${a.receiving_decision === 'approved' ? '✓ Approved' : a.receiving_decision === 'denied' ? '✗ Denied' : 'Pending'}</h4>
+                ${a.receiving_date ? `<p style="font-size:.8rem;color:var(--gray)">${formatDate(a.receiving_date)}</p>` : ''}
+                ${a.receiving_notes ? `<p style="margin-top:6px">${a.receiving_notes}</p>` : ''}
+              </div>
+            ` : ''}
+
+            ${a.hr_decision ? `
+              <div class="decision-box ${a.hr_decision}" style="margin-top:10px">
+                <h4>HR Department: ${a.hr_decision === 'approved' ? '✓ Transfer Approved' : '✗ Denied'}</h4>
+                ${a.hr_date ? `<p style="font-size:.8rem;color:var(--gray)">${formatDate(a.hr_date)}</p>` : ''}
+                ${a.hr_notes ? `<p style="margin-top:6px">${a.hr_notes}</p>` : ''}
+              </div>
+            ` : (a.status === 'pending_hr' ? `<div class="decision-box pending" style="margin-top:10px"><h4>HR Department: Pending Final Approval</h4></div>` : '')}
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Mobile single column
+    const style = document.createElement('style');
+    style.textContent = '@media(max-width:700px){.detail-cols{grid-template-columns:1fr!important}}';
+    document.head.appendChild(style);
+  }).catch(() => {
+    document.getElementById('page-body').innerHTML = `<div class="alert alert-error">Could not load application. <a href="/my-applications.html">Go back</a></div>`;
+  });
+}
+</script>
+</body>
+</html>

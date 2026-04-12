@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — GCK Transfer Center</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <img src="/assets/logo.svg" alt="USD 457 Logo">
+      <h1>In-District Transfer Center</h1>
+      <p>Garden City Public Schools — USD 457</p>
+    </div>
+    <div class="auth-body">
+      <h2>Sign In to Your Account</h2>
+      <div id="alert" class="alert alert-error hidden"></div>
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email">Email Address <span class="required">*</span></label>
+          <input type="email" id="email" class="form-control" placeholder="you@gckschools.com" autocomplete="email" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password <span class="required">*</span></label>
+          <input type="password" id="password" class="form-control" placeholder="Enter your password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="submitBtn">
+          Sign In
+        </button>
+      </form>
+      <div class="auth-links">
+        <a href="/forgot-password.html">Forgot your password?</a>
+        <a href="/register.html">First time? Create account</a>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Redirect if already logged in
+    const token = localStorage.getItem('tc_token');
+    const user = JSON.parse(localStorage.getItem('tc_user') || 'null');
+    if (token && user) {
+      if (user.role === 'hr_admin') location.href = '/hr/dashboard.html';
+      else if (user.role === 'principal') location.href = '/principal/dashboard.html';
+      else location.href = '/dashboard.html';
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      const alert = document.getElementById('alert');
+      alert.classList.add('hidden');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Signing in…';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        localStorage.setItem('tc_token', data.token);
+        localStorage.setItem('tc_user', JSON.stringify(data.user));
+
+        if (data.user.role === 'hr_admin') location.href = '/hr/dashboard.html';
+        else if (data.user.role === 'principal') location.href = '/principal/dashboard.html';
+        else location.href = '/dashboard.html';
+      } catch (err) {
+        alert.textContent = err.message;
+        alert.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+    });
+  </script>
+</body>
+</html>

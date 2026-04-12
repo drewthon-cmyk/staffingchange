@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HR Dashboard — GCK Transfer Center</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<button class="sidebar-toggle">☰</button>
+<div class="sidebar-overlay"></div>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" alt="USD 457"><h2>Transfer Center</h2><p>USD 457 — HR Admin</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">HR Administration</div>
+      <a href="/hr/dashboard.html" class="nav-item"><span class="icon">🏠</span> Dashboard</a>
+      <a href="/hr/postings.html" class="nav-item"><span class="icon">📋</span> Job Postings</a>
+      <a href="/hr/applications.html" class="nav-item"><span class="icon">📁</span> All Applications</a>
+      <a href="/hr/employees.html" class="nav-item"><span class="icon">👥</span> Employees</a>
+      <a href="/hr/archive.html" class="nav-item"><span class="icon">🗄️</span> Archive</a>
+      <div class="nav-section">Account</div>
+      <a href="/account.html" class="nav-item"><span class="icon">⚙️</span> Account Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar">?</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebar-name">Loading…</div>
+          <div class="sidebar-user-role" id="sidebar-role">HR Administrator</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header">
+      <div><h1>HR Dashboard</h1><p>Garden City Public Schools Transfer Center</p></div>
+      <div style="display:flex;gap:10px">
+        <a href="/hr/postings.html" class="btn btn-primary">+ New Posting</a>
+        <a href="/api/export/applications" class="btn btn-secondary" id="exportBtn">Export CSV</a>
+      </div>
+    </div>
+    <div class="page-body">
+      <div class="stats-grid">
+        <div class="stat-card blue"><div class="stat-number" id="s-open">—</div><div class="stat-label">Open Positions</div></div>
+        <div class="stat-card gold"><div class="stat-number" id="s-total">—</div><div class="stat-label">Total Applications</div></div>
+        <div class="stat-card orange"><div class="stat-number" id="s-sending">—</div><div class="stat-label">Awaiting Sending Principal</div></div>
+        <div class="stat-card blue"><div class="stat-number" id="s-interview">—</div><div class="stat-label">Awaiting Interview</div></div>
+        <div class="stat-card gold"><div class="stat-number" id="s-hr">—</div><div class="stat-label">Awaiting HR Approval</div></div>
+        <div class="stat-card green"><div class="stat-number" id="s-approved">—</div><div class="stat-label">Transfers Approved</div></div>
+        <div class="stat-card gray"><div class="stat-number" id="s-denied">—</div><div class="stat-label">Total Denied</div></div>
+        <div class="stat-card brown"><div class="stat-number" id="s-users">—</div><div class="stat-label">Registered Employees</div></div>
+      </div>
+
+      <!-- Pending HR Approval -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h2>⚡ Awaiting Your Final Approval</h2>
+          <a href="/hr/applications.html?status=pending_hr" class="btn btn-outline btn-sm">View All</a>
+        </div>
+        <div id="hr-pending-container">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Recent Applications -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Recent Applications</h2>
+          <a href="/hr/applications.html" class="btn btn-outline btn-sm">View All</a>
+        </div>
+        <div id="recent-container">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- HR Decision Modal -->
+<div class="modal-overlay" id="hrModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="hr-modal-title">Final HR Decision</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="hr-modal-info" style="background:var(--light-gray);border-radius:8px;padding:14px;margin-bottom:20px;font-size:.9rem"></div>
+      <div id="hr-alert" class="alert hidden"></div>
+      <div class="form-group">
+        <label>HR Notes (optional)</label>
+        <textarea id="hr-notes" class="form-control" rows="3" placeholder="Any comments for the employee and principals…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('hrModal')">Cancel</button>
+      <button class="btn btn-danger" id="btn-hr-deny">Deny Transfer</button>
+      <button class="btn btn-success" id="btn-hr-approve">Approve Transfer</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const user = requireAuth(['hr_admin']);
+let currentAppId = null;
+
+if (user) {
+  initSidebar(user);
+
+  // Fix export link to include auth token
+  document.getElementById('exportBtn').addEventListener('click', (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('tc_token');
+    const url = `/api/export/applications`;
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.blob()).then(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `transfer-applications-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+      });
+  });
+
+  API.get('/admin/stats').then(s => {
+    document.getElementById('s-open').textContent = s.open_postings;
+    document.getElementById('s-total').textContent = s.total_applications;
+    document.getElementById('s-sending').textContent = s.pending_sending;
+    document.getElementById('s-interview').textContent = s.pending_interview;
+    document.getElementById('s-hr').textContent = s.pending_hr;
+    document.getElementById('s-approved').textContent = s.approved;
+    document.getElementById('s-denied').textContent = s.denied;
+    document.getElementById('s-users').textContent = s.total_users;
+  });
+
+  API.get('/applications?status=pending_hr').then(apps => {
+    const c = document.getElementById('hr-pending-container');
+    if (!apps.length) {
+      c.innerHTML = `<div class="empty-state"><div class="empty-icon">✅</div><h3>No applications awaiting your approval</h3></div>`;
+      return;
+    }
+    c.innerHTML = renderTable(apps, true);
+  });
+
+  API.get('/applications').then(apps => {
+    const c = document.getElementById('recent-container');
+    if (!apps.length) { c.innerHTML = `<div class="empty-state"><div class="empty-icon">📁</div><h3>No applications yet</h3></div>`; return; }
+    c.innerHTML = renderTable(apps.slice(0, 10), false);
+  });
+
+  function renderTable(apps, showDecide) {
+    return `<div class="table-wrapper"><table><thead><tr>
+      <th>Applicant</th><th>Position</th><th>School</th><th>Applied</th><th>Interview</th><th>Status</th><th></th>
+    </tr></thead><tbody>` +
+    apps.map(a => `<tr>
+      <td><strong>${a.employee_name}</strong><br><small class="text-gray">${a.current_school}</small></td>
+      <td>${a.posting_title}</td>
+      <td>${a.school_name}</td>
+      <td>${formatDate(a.applied_date)}</td>
+      <td>${a.interview_date ? formatDate(a.interview_date) : '—'}</td>
+      <td>${statusLabel(a.status)}</td>
+      <td style="white-space:nowrap">
+        <a href="/hr/applications.html?id=${a.id}" class="btn btn-outline btn-sm">View</a>
+        ${showDecide ? `<button class="btn btn-primary btn-sm" onclick="openHrDecision(${a.id},'${a.employee_name.replace(/'/g,"\\'")}','${a.posting_title.replace(/'/g,"\\'")}','${a.school_name.replace(/'/g,"\\'")}')">Decide</button>` : ''}
+      </td>
+    </tr>`).join('') + `</tbody></table></div>`;
+  }
+
+  function openHrDecision(id, name, title, school) {
+    currentAppId = id;
+    document.getElementById('hr-modal-title').textContent = `Final Decision — ${name}`;
+    document.getElementById('hr-modal-info').innerHTML = `
+      <strong>${name}</strong> is transferring to <strong>${title}</strong> at ${school}.<br>
+      Both principals have approved. This is the final HR decision.
+    `;
+    document.getElementById('hr-notes').value = '';
+    hideAlert('hr-alert');
+    openModal('hrModal');
+  }
+  window.openHrDecision = openHrDecision;
+
+  async function submitHrDecision(approved) {
+    const btn = approved ? document.getElementById('btn-hr-approve') : document.getElementById('btn-hr-deny');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+    hideAlert('hr-alert');
+    try {
+      await API.post(`/workflow/${currentAppId}/hr-decision`, {
+        approved,
+        notes: document.getElementById('hr-notes').value,
+      });
+      closeModal('hrModal');
+      location.reload();
+    } catch (err) {
+      showAlert('hr-alert', err.message);
+      btn.disabled = false;
+      btn.textContent = approved ? 'Approve Transfer' : 'Deny Transfer';
+    }
+  }
+
+  document.getElementById('btn-hr-approve').addEventListener('click', () => submitHrDecision(true));
+  document.getElementById('btn-hr-deny').addEventListener('click', () => submitHrDecision(false));
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Postings — GCK Transfer Center</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<button class="sidebar-toggle">☰</button>
+<div class="sidebar-overlay"></div>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><img src="/assets/logo.svg" alt="USD 457"><h2>Transfer Center</h2><p>USD 457 — HR Admin</p></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">HR Administration</div>
+      <a href="/hr/dashboard.html" class="nav-item"><span class="icon">🏠</span> Dashboard</a>
+      <a href="/hr/postings.html" class="nav-item"><span class="icon">📋</span> Job Postings</a>
+      <a href="/hr/applications.html" class="nav-item"><span class="icon">📁</span> All Applications</a>
+      <a href="/hr/employees.html" class="nav-item"><span class="icon">👥</span> Employees</a>
+      <a href="/hr/archive.html" class="nav-item"><span class="icon">🗄️</span> Archive</a>
+      <div class="nav-section">Account</div>
+      <a href="/account.html" class="nav-item"><span class="icon">⚙️</span> Account Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar">?</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebar-name">Loading…</div>
+          <div class="sidebar-user-role" id="sidebar-role">HR Administrator</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header">
+      <div><h1>Job Postings</h1><p>Manage open transfer positions</p></div>
+      <button class="btn btn-primary" onclick="openModal('postingModal')">+ New Posting</button>
+    </div>
+    <div class="page-body">
+      <div class="filter-bar">
+        <select id="statusFilter" class="form-control">
+          <option value="open">Open</option>
+          <option value="filled">Filled</option>
+          <option value="closed">Closed</option>
+          <option value="">All</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" id="exportPostingsBtn">Export CSV</button>
+      </div>
+      <div id="postings-container">
+        <div class="loading-overlay"><div class="spinner"></div><p>Loading…</p></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Create/Edit Posting Modal -->
+<div class="modal-overlay" id="postingModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="posting-modal-title">New Job Posting</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="posting-alert" class="alert hidden"></div>
+      <form id="postingForm">
+        <input type="hidden" id="posting-id">
+        <div class="form-group">
+          <label>Position Title <span class="required">*</span></label>
+          <input type="text" id="posting-title" class="form-control" placeholder="e.g., 4th Grade Teacher" required>
+        </div>
+        <div class="form-group">
+          <label>School / Department <span class="required">*</span></label>
+          <select id="posting-school" class="form-control" required>
+            <option value="">— Select school or department —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>FTE <span class="required">*</span></label>
+          <select id="posting-fte" class="form-control" required>
+            <option value="">— Select FTE —</option>
+            <option value="1.0 FTE (Full Time)">1.0 FTE (Full Time)</option>
+            <option value="0.5 FTE (Half Time)">0.5 FTE (Half Time)</option>
+            <option value="0.75 FTE">0.75 FTE</option>
+            <option value="0.25 FTE">0.25 FTE</option>
+            <option value="Part Time">Part Time</option>
+            <option value="As Needed">As Needed</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Job Description URL (optional)</label>
+          <input type="url" id="posting-url" class="form-control" placeholder="https://…">
+          <p class="form-hint">Link to the full job description document.</p>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('postingModal')">Cancel</button>
+      <button class="btn btn-primary" id="save-posting-btn">Save Posting</button>
+    </div>
+  </div>
+</div>
+
+<!-- Close Posting Confirm -->
+<div class="modal-overlay" id="closeModal">
+  <div class="modal">
+    <div class="modal-header"><h3>Close Posting</h3><button class="modal-close">✕</button></div>
+    <div class="modal-body">
+      <p>Are you sure you want to close this posting? It will no longer be visible to employees.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('closeModal')">Cancel</button>
+      <button class="btn btn-danger" id="confirm-close-btn">Close Posting</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const user = requireAuth(['hr_admin']);
+let schools = [];
+let closeTargetId = null;
+let editMode = false;
+
+if (user) {
+  initSidebar(user);
+
+  // Load schools for dropdown
+  API.get('/admin/schools').then(data => {
+    schools = data;
+    const sel = document.getElementById('posting-school');
+    data.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.id; o.textContent = s.name; sel.appendChild(o);
+    });
+  });
+
+  document.getElementById('statusFilter').addEventListener('change', loadPostings);
+  loadPostings();
+
+  function loadPostings() {
+    const status = document.getElementById('statusFilter').value;
+    document.getElementById('postings-container').innerHTML = `<div class="loading-overlay"><div class="spinner"></div></div>`;
+    API.get(`/postings${status ? '?status=' + status : ''}`).then(render).catch(() => {
+      document.getElementById('postings-container').innerHTML = `<div class="alert alert-error">Failed to load postings.</div>`;
+    });
+  }
+
+  function render(postings) {
+    const c = document.getElementById('postings-container');
+    if (!postings.length) {
+      c.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>No postings found</h3><p>Create a new posting to get started.</p></div>`;
+      return;
+    }
+    c.innerHTML = `<div class="card"><div class="table-wrapper"><table><thead><tr>
+      <th>Position Title</th><th>School / Department</th><th>FTE</th><th>Posted</th><th>Applicants</th><th>Status</th><th>Actions</th>
+    </tr></thead><tbody>` +
+    postings.map(p => `<tr>
+      <td><strong>${p.title}</strong>${p.job_description_url ? ` <a href="${p.job_description_url}" target="_blank" style="font-size:.75rem;color:var(--blue)">[description]</a>` : ''}</td>
+      <td>${p.school_name}</td>
+      <td>${p.fte}</td>
+      <td>${formatDate(p.posted_date)}</td>
+      <td><span style="font-weight:600">${p.applicant_count || 0}</span></td>
+      <td>${postingStatusBadge(p.status)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline btn-sm" onclick="editPosting(${JSON.stringify(p).replace(/"/g,'&quot;')})">Edit</button>
+        ${p.status === 'open' ? `<button class="btn btn-danger btn-sm" onclick="confirmClose(${p.id})" style="margin-left:4px">Close</button>` : ''}
+      </td>
+    </tr>`).join('') +
+    `</tbody></table></div></div>`;
+  }
+
+  function editPosting(p) {
+    editMode = true;
+    document.getElementById('posting-modal-title').textContent = 'Edit Posting';
+    document.getElementById('posting-id').value = p.id;
+    document.getElementById('posting-title').value = p.title;
+    document.getElementById('posting-fte').value = p.fte;
+    document.getElementById('posting-url').value = p.job_description_url || '';
+    // Set school
+    const sel = document.getElementById('posting-school');
+    for (const o of sel.options) { if (o.textContent === p.school_name) { o.selected = true; break; } }
+    hideAlert('posting-alert');
+    openModal('postingModal');
+  }
+  window.editPosting = editPosting;
+
+  function confirmClose(id) {
+    closeTargetId = id;
+    openModal('closeModal');
+  }
+  window.confirmClose = confirmClose;
+
+  document.getElementById('confirm-close-btn').addEventListener('click', async () => {
+    try {
+      await API.del(`/postings/${closeTargetId}`);
+      closeModal('closeModal');
+      loadPostings();
+    } catch (err) { alert(err.message); }
+  });
+
+  // Reset modal on open for new posting
+  document.querySelector('[onclick="openModal(\'postingModal\')"]')?.addEventListener('click', () => {
+    editMode = false;
+    document.getElementById('posting-modal-title').textContent = 'New Job Posting';
+    document.getElementById('postingForm').reset();
+    document.getElementById('posting-id').value = '';
+    hideAlert('posting-alert');
+  });
+
+  document.getElementById('save-posting-btn').addEventListener('click', async () => {
+    const title = document.getElementById('posting-title').value.trim();
+    const schoolId = document.getElementById('posting-school').value;
+    const fte = document.getElementById('posting-fte').value;
+    const url = document.getElementById('posting-url').value.trim();
+    if (!title || !schoolId || !fte) { showAlert('posting-alert', 'Please fill in all required fields.'); return; }
+
+    const btn = document.getElementById('save-posting-btn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+    hideAlert('posting-alert');
+
+    try {
+      const id = document.getElementById('posting-id').value;
+      const body = { title, school_id: parseInt(schoolId), fte, job_description_url: url || null };
+      if (id) { await API.put(`/postings/${id}`, body); }
+      else { await API.post('/postings', body); }
+      closeModal('postingModal');
+      loadPostings();
+    } catch (err) {
+      showAlert('posting-alert', err.message);
+    }
+    btn.disabled = false; btn.textContent = 'Save Posting';
+  });
+
+  document.getElementById('exportPostingsBtn').addEventListener('click', () => {
+    const token = localStorage.getItem('tc_token');
+    fetch('/api/export/postings', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.blob()).then(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `job-postings-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+      });
+  });
+}
+</script>
+</body>
+</html>

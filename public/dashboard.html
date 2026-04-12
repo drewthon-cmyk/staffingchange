@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Dashboard — GCK Transfer Center</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<button class="sidebar-toggle">☰</button>
+<div class="sidebar-overlay"></div>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="/assets/logo.svg" alt="USD 457">
+      <h2>Transfer Center</h2>
+      <p>USD 457</p>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Employee</div>
+      <a href="/dashboard.html" class="nav-item"><span class="icon">🏠</span> Dashboard</a>
+      <a href="/postings.html" class="nav-item"><span class="icon">📋</span> Open Positions</a>
+      <a href="/my-applications.html" class="nav-item"><span class="icon">📁</span> My Applications</a>
+      <div class="nav-section">Account</div>
+      <a href="/account.html" class="nav-item"><span class="icon">⚙️</span> Account Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar">?</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebar-name">Loading…</div>
+          <div class="sidebar-user-role" id="sidebar-role">Employee</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <h1>Welcome Back</h1>
+        <p id="welcome-sub">Garden City Public Schools Transfer Center</p>
+      </div>
+      <a href="/postings.html" class="btn btn-primary">Browse Open Positions</a>
+    </div>
+    <div class="page-body">
+      <div class="stats-grid">
+        <div class="stat-card blue"><div class="stat-number" id="stat-active">—</div><div class="stat-label">Active Applications</div></div>
+        <div class="stat-card green"><div class="stat-number" id="stat-approved">—</div><div class="stat-label">Approved Transfers</div></div>
+        <div class="stat-card orange"><div class="stat-number" id="stat-pending">—</div><div class="stat-label">Awaiting Action</div></div>
+        <div class="stat-card gold"><div class="stat-number" id="stat-total">—</div><div class="stat-label">Total Applications</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>My Recent Applications</h2>
+          <a href="/my-applications.html" class="btn btn-outline btn-sm">View All</a>
+        </div>
+        <div id="apps-container">
+          <div class="loading-overlay"><div class="spinner"></div><p>Loading…</p></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/js/app.js"></script>
+<script>
+  const user = requireAuth(['employee']);
+  if (user) {
+    initSidebar(user);
+    document.getElementById('welcome-sub').textContent = `Welcome, ${user.name || user.email}`;
+
+    API.get('/applications/my').then(apps => {
+      const active = apps.filter(a => !['hr_approved','hr_denied','sending_denied','receiving_denied','position_filled'].includes(a.status));
+      const approved = apps.filter(a => a.status === 'hr_approved');
+      const pending = apps.filter(a => ['pending_sending_principal','pending_interview','interview_scheduled','pending_hr'].includes(a.status));
+      document.getElementById('stat-active').textContent = active.length;
+      document.getElementById('stat-approved').textContent = approved.length;
+      document.getElementById('stat-pending').textContent = pending.length;
+      document.getElementById('stat-total').textContent = apps.length;
+
+      const container = document.getElementById('apps-container');
+      if (!apps.length) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>No applications yet</h3><p>Browse open positions to get started.</p><a href="/postings.html" class="btn btn-primary mt-4">Browse Positions</a></div>`;
+        return;
+      }
+      const recent = apps.slice(0, 5);
+      container.innerHTML = `<div class="table-wrapper"><table><thead><tr><th>Position</th><th>School</th><th>Applied</th><th>Status</th><th></th></tr></thead><tbody>` +
+        recent.map(a => `<tr>
+          <td><strong>${a.posting_title}</strong></td>
+          <td>${a.school_name}</td>
+          <td>${formatDate(a.applied_date)}</td>
+          <td>${statusLabel(a.status)}</td>
+          <td><a href="/application-status.html?id=${a.id}" class="btn btn-outline btn-sm">View</a></td>
+        </tr>`).join('') +
+        `</tbody></table></div>`;
+    }).catch(() => {
+      document.getElementById('apps-container').innerHTML = `<div class="alert alert-error" style="margin:16px">Failed to load applications.</div>`;
+    });
+  }
+</script>
+</body>
+</html>

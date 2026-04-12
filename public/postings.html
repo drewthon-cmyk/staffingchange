@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open Positions — GCK Transfer Center</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<button class="sidebar-toggle">☰</button>
+<div class="sidebar-overlay"></div>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="/assets/logo.svg" alt="USD 457">
+      <h2>Transfer Center</h2><p>USD 457</p>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Employee</div>
+      <a href="/dashboard.html" class="nav-item"><span class="icon">🏠</span> Dashboard</a>
+      <a href="/postings.html" class="nav-item"><span class="icon">📋</span> Open Positions</a>
+      <a href="/my-applications.html" class="nav-item"><span class="icon">📁</span> My Applications</a>
+      <div class="nav-section">Account</div>
+      <a href="/account.html" class="nav-item"><span class="icon">⚙️</span> Account Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar">?</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebar-name">Loading…</div>
+          <div class="sidebar-user-role" id="sidebar-role">Employee</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-header">
+      <div><h1>Open Positions</h1><p>Available in-district transfer opportunities</p></div>
+    </div>
+    <div class="page-body">
+      <div class="filter-bar">
+        <input type="text" class="form-control search-input" id="searchInput" placeholder="Search by title or school…">
+      </div>
+      <div id="postings-container">
+        <div class="loading-overlay"><div class="spinner"></div><p>Loading positions…</p></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Apply Modal -->
+<div class="modal-overlay" id="applyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Apply for Transfer</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="apply-posting-info" style="background:var(--light-gray);border-radius:8px;padding:14px;margin-bottom:20px;font-size:.9rem;color:var(--brown)"></div>
+      <div id="apply-alert" class="alert hidden"></div>
+      <form id="applyForm">
+        <input type="hidden" id="apply-posting-id">
+        <div class="form-group">
+          <label>Full Name <span class="required">*</span></label>
+          <input type="text" id="apply-name" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>Current School / Department <span class="required">*</span></label>
+          <select id="apply-school" class="form-control" required>
+            <option value="">— Select your current building —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Current Position / Job Title <span class="required">*</span></label>
+          <input type="text" id="apply-position" class="form-control" placeholder="e.g., 3rd Grade Teacher" required>
+        </div>
+        <div class="form-group">
+          <label>Resume (PDF only) <span class="required">*</span></label>
+          <div class="file-upload-area" id="dropZone" onclick="document.getElementById('resumeFile').click()">
+            <div class="upload-icon">📄</div>
+            <p>Click to select your resume, or drag and drop here</p>
+            <p><strong>PDF files only, max 10MB</strong></p>
+            <p class="file-name hidden" id="file-label"></p>
+          </div>
+          <input type="file" id="resumeFile" accept=".pdf" style="display:none">
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('applyModal')">Cancel</button>
+      <button class="btn btn-primary" id="submitApply">Submit Application</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const user = requireAuth(['employee', 'principal']);
+if (user) {
+  initSidebar(user);
+  const schoolNames = [
+    'Garden City High School','Garden City Achieve Academy','Horace Good Middle School',
+    'Kenneth Henderson Middle School','Bernadine Sitts Intermediate School',
+    'Charles Stones Intermediate Center','Abe Huber Elementary','Alta Brown Elementary',
+    'Buffalo Jones Elementary','Edith Sheuerman Elementary','Florence Wilson Elementary',
+    'Georgia Matthews Elementary','Gertrude Walker Elementary','Jenny Berker Elementary',
+    'Plymell Elementary','Victor Ornelas Elementary','Garfield Early Childhood Center',
+    'Finance Department','HR Department','Curriculum and Instruction Department',
+    'Nutrition Department','Health Services Department','Student Services Department',
+    'Transportation Department','Plant Facilities Department',
+  ];
+  const sel = document.getElementById('apply-school');
+  schoolNames.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o); });
+
+  // Pre-fill user info
+  const applyName = document.getElementById('apply-name');
+  const applyPosition = document.getElementById('apply-position');
+  if (user.name) applyName.value = user.name;
+  if (user.current_school) {
+    const opt = sel.querySelector(`option[value="${user.current_school}"]`);
+    if (opt) opt.selected = true;
+  }
+
+  // Drag and drop
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('resumeFile');
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') {
+      const dt = new DataTransfer(); dt.items.add(file); fileInput.files = dt.files;
+      document.getElementById('file-label').textContent = file.name;
+      document.getElementById('file-label').classList.remove('hidden');
+    }
+  });
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files[0];
+    if (f) { document.getElementById('file-label').textContent = f.name; document.getElementById('file-label').classList.remove('hidden'); }
+  });
+
+  let allPostings = [];
+
+  function renderPostings(postings) {
+    const container = document.getElementById('postings-container');
+    if (!postings.length) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>No open positions at this time</h3><p>Check back later for new transfer opportunities.</p></div>`;
+      return;
+    }
+    container.innerHTML = `<div class="postings-grid">` + postings.map(p => `
+      <div class="posting-card">
+        <div class="posting-card-header">
+          <h3>${p.title}</h3>
+          <p>${p.school_name}</p>
+        </div>
+        <div class="posting-card-body">
+          <div class="posting-meta">
+            <div class="posting-meta-item">📊 <span><strong>FTE:</strong> ${p.fte}</span></div>
+            <div class="posting-meta-item">📅 <span>Posted ${formatDate(p.posted_date)}</span></div>
+            ${p.applicant_count > 0 ? `<div class="posting-meta-item">👤 <span>${p.applicant_count} applicant${p.applicant_count !== 1 ? 's' : ''}</span></div>` : ''}
+          </div>
+          ${p.job_description_url ? `<a href="${p.job_description_url}" target="_blank" class="btn btn-outline btn-sm">View Job Description</a>` : ''}
+        </div>
+        <div class="posting-card-footer">
+          ${postingStatusBadge(p.status)}
+          <button class="btn btn-primary btn-sm" onclick="openApply(${p.id}, '${p.title.replace(/'/g,"\\'")}', '${p.school_name.replace(/'/g,"\\'")}', '${p.fte}')">Apply Now</button>
+        </div>
+      </div>
+    `).join('') + `</div>`;
+  }
+
+  API.get('/postings?status=open').then(data => {
+    allPostings = data;
+    renderPostings(data);
+  }).catch(() => {
+    document.getElementById('postings-container').innerHTML = `<div class="alert alert-error">Failed to load positions.</div>`;
+  });
+
+  document.getElementById('searchInput').addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase();
+    renderPostings(allPostings.filter(p => p.title.toLowerCase().includes(q) || p.school_name.toLowerCase().includes(q)));
+  });
+
+  function openApply(id, title, school, fte) {
+    document.getElementById('apply-posting-id').value = id;
+    document.getElementById('apply-posting-info').innerHTML = `<strong>${title}</strong><br>${school} &nbsp;|&nbsp; FTE: ${fte}`;
+    hideAlert('apply-alert');
+    openModal('applyModal');
+  }
+  window.openApply = openApply;
+
+  document.getElementById('submitApply').addEventListener('click', async () => {
+    hideAlert('apply-alert');
+    const postingId = document.getElementById('apply-posting-id').value;
+    const name = document.getElementById('apply-name').value.trim();
+    const school = document.getElementById('apply-school').value;
+    const position = document.getElementById('apply-position').value.trim();
+    const file = document.getElementById('resumeFile').files[0];
+    if (!name || !school || !position) { showAlert('apply-alert', 'Please fill in all required fields.'); return; }
+    if (!file) { showAlert('apply-alert', 'Please attach your resume (PDF).'); return; }
+
+    const btn = document.getElementById('submitApply');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Submitting…';
+
+    try {
+      const fd = new FormData();
+      fd.append('posting_id', postingId);
+      fd.append('employee_name', name);
+      fd.append('current_school', school);
+      fd.append('current_position', position);
+      fd.append('resume', file);
+      await API.upload('/applications', fd);
+      closeModal('applyModal');
+      showAlert('apply-alert', 'Application submitted!', 'success');
+      setTimeout(() => location.href = '/my-applications.html', 1200);
+    } catch (err) {
+      showAlert('apply-alert', err.message);
+      btn.disabled = false; btn.textContent = 'Submit Application';
+    }
+  });
+}
+</script>
+</body>
+</html>

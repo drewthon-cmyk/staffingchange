@@ -102,6 +102,17 @@ function initializeDb() {
     );
   `);
 
+  // Seed schools from config if table is empty
+  const schoolCount = db.prepare('SELECT COUNT(*) as c FROM schools').get().c;
+  if (schoolCount === 0) {
+    const config = require('../config/config');
+    const insertSchool = db.prepare('INSERT INTO schools (name) VALUES (?)');
+    for (const name of config.schools) {
+      insertSchool.run(name);
+    }
+    console.log(`Seeded ${config.schools.length} schools.`);
+  }
+
   console.log('Database initialized successfully.');
   return db;
 }

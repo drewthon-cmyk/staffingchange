@@ -21,7 +21,14 @@ router.post('/register', async (req, res) => {
   }
 
   const db = getDb();
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
+  let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
+
+  // Allow HR admins to self-register even if not pre-loaded
+  const isHrAdmin = config.hrAdminEmails.includes(email.toLowerCase());
+  if (!user && isHrAdmin) {
+    db.prepare(`INSERT INTO users (email, role) VALUES (?, 'hr_admin')`).run(email.toLowerCase());
+    user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
+  }
 
   if (!user) {
     return res.status(403).json({ error: 'Your email address has not been added to the system. Please contact HR.' });
@@ -31,10 +38,11 @@ router.post('/register', async (req, res) => {
   }
 
   const hash = await bcrypt.hash(password, 12);
+  const role = isHrAdmin ? 'hr_admin' : user.role;
   db.prepare(`
-    UPDATE users SET password_hash = ?, name = ?, current_school = ?, current_position = ?
+    UPDATE users SET password_hash = ?, name = ?, current_school = ?, current_position = ?, role = ?
     WHERE email = ?
-  `).run(hash, name, current_school || null, current_position || null, email.toLowerCase());
+  `).run(hash, name, current_school || null, current_position || null, role, email.toLowerCase());
 
   res.json({ message: 'Account created successfully. You can now log in.' });
 });

@@ -9,7 +9,11 @@ const config = require('../config/config');
 
 const router = express.Router();
 
-const csvUpload = multer({ dest: path.join(__dirname, '..', 'uploads') });
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+const csvUpload = multer({ dest: uploadsDir });
 
 // ─── Dashboard Stats ───────────────────────────────────────────────────────────
 router.get('/stats', authenticate, requireRole('hr_admin'), (req, res) => {

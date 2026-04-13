@@ -209,11 +209,14 @@ if (user) {
     hideAlert('decision-alert');
     try {
       await API.post(`/workflow/${currentAppId}/receiving-decision`, { approved, notes });
-      closeModal('decisionModal');
-      loadApps();
+      btn.innerHTML = approved ? '✅ Approved!' : '✅ Decision Saved';
+      btn.style.background = 'var(--green)';
+      showAlert('decision-alert', approved ? 'Transfer approved! This has been sent to HR for final approval.' : 'Transfer denied. The employee has been notified.', 'success');
+      setTimeout(() => { closeModal('decisionModal'); loadApps(); }, 2000);
     } catch (err) {
       showAlert('decision-alert', err.message);
       btn.disabled = false; btn.textContent = approved ? 'Approve Transfer' : 'Deny Transfer';
+      btn.style.background = '';
     }
   }
 

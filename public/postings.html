@@ -212,12 +212,14 @@ if (user) {
       fd.append('current_position', position);
       fd.append('resume', file);
       await API.upload('/applications', fd);
-      closeModal('applyModal');
-      showAlert('apply-alert', 'Application submitted!', 'success');
-      setTimeout(() => location.href = '/my-applications.html', 1200);
+      btn.innerHTML = '✅ Application Submitted!';
+      btn.style.background = 'var(--green)';
+      showAlert('apply-alert', 'Your application was submitted successfully! Redirecting…', 'success');
+      setTimeout(() => location.href = '/my-applications.html', 2000);
     } catch (err) {
       showAlert('apply-alert', err.message);
       btn.disabled = false; btn.textContent = 'Submit Application';
+      btn.style.background = '';
     }
   });
 }

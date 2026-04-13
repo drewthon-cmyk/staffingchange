@@ -66,16 +66,16 @@ function formatDatetime(ts) {
 
 function statusLabel(status) {
   const map = {
-    pending_sending_principal: { text: 'Awaiting Sending Principal', cls: 'badge-pending' },
-    sending_denied:            { text: 'Denied by Sending Principal', cls: 'badge-denied' },
-    pending_interview:         { text: 'Awaiting Interview Schedule', cls: 'badge-interview' },
-    interview_scheduled:       { text: 'Interview Scheduled', cls: 'badge-interview' },
-    pending_receiving_principal: { text: 'Awaiting Receiving Principal', cls: 'badge-pending' },
-    receiving_denied:          { text: 'Denied by Receiving Principal', cls: 'badge-denied' },
-    pending_hr:                { text: 'Awaiting HR Approval', cls: 'badge-hr' },
-    hr_approved:               { text: 'Transfer Approved', cls: 'badge-approved' },
-    hr_denied:                 { text: 'Denied by HR', cls: 'badge-denied' },
-    position_filled:           { text: 'Position Filled', cls: 'badge-closed' },
+    pending_sending_principal:   { text: 'In Progress — Sending Principal', cls: 'badge-pending' },
+    sending_denied:              { text: 'Denied by Sending Principal', cls: 'badge-denied' },
+    pending_interview:           { text: 'In Progress — Scheduling Interview', cls: 'badge-interview' },
+    interview_scheduled:         { text: 'In Progress — Interview Scheduled', cls: 'badge-interview' },
+    pending_receiving_principal: { text: 'In Progress — Receiving Principal', cls: 'badge-pending' },
+    receiving_denied:            { text: 'Denied by Receiving Principal', cls: 'badge-denied' },
+    pending_hr:                  { text: 'In Progress — Awaiting HR Approval', cls: 'badge-hr' },
+    hr_approved:                 { text: 'Transfer Approved', cls: 'badge-approved' },
+    hr_denied:                   { text: 'Denied by HR', cls: 'badge-denied' },
+    position_filled:             { text: 'Position Filled', cls: 'badge-closed' },
   };
   const s = map[status] || { text: status, cls: 'badge-pending' };
   return `<span class="badge ${s.cls}">${s.text}</span>`;

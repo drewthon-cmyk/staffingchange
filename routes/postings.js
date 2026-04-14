@@ -74,7 +74,7 @@ router.get('/:id', authenticate, (req, res) => {
 
 // Create posting (HR only)
 router.post('/', authenticate, requireRole('hr_admin'), (req, res) => {
-  const { title, school_id, fte, job_description_url } = req.body;
+  const { title, school_id, fte, job_description_url, close_date, start_date, contact_name, contact_email } = req.body;
 
   if (!title || !school_id || !fte) {
     return res.status(400).json({ error: 'Title, school, and FTE are required.' });
@@ -84,10 +84,12 @@ router.post('/', authenticate, requireRole('hr_admin'), (req, res) => {
   const school = db.prepare('SELECT * FROM schools WHERE id = ?').get(school_id);
   if (!school) return res.status(404).json({ error: 'School not found.' });
 
+  const toTs = (d) => d ? Math.floor(new Date(d).getTime() / 1000) : null;
+
   const result = db.prepare(`
-    INSERT INTO job_postings (title, school_id, fte, job_description_url, created_by)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(title, school_id, fte, job_description_url || null, req.user.id);
+    INSERT INTO job_postings (title, school_id, fte, job_description_url, close_date, start_date, contact_name, contact_email, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(title, school_id, fte, job_description_url || null, toTs(close_date), toTs(start_date), contact_name || null, contact_email || null, req.user.id);
 
   const posting = db.prepare('SELECT jp.*, s.name as school_name FROM job_postings jp JOIN schools s ON jp.school_id = s.id WHERE jp.id = ?').get(result.lastInsertRowid);
   res.status(201).json(posting);
@@ -101,8 +103,11 @@ router.put('/:id', authenticate, requireRole('hr_admin'), (req, res) => {
   const posting = db.prepare('SELECT * FROM job_postings WHERE id = ?').get(req.params.id);
   if (!posting) return res.status(404).json({ error: 'Posting not found.' });
 
+  const toTs = (d) => d ? Math.floor(new Date(d).getTime() / 1000) : null;
+
   db.prepare(`
-    UPDATE job_postings SET title = ?, school_id = ?, fte = ?, job_description_url = ?, status = ?
+    UPDATE job_postings SET title = ?, school_id = ?, fte = ?, job_description_url = ?, status = ?,
+      close_date = ?, start_date = ?, contact_name = ?, contact_email = ?
     WHERE id = ?
   `).run(
     title || posting.title,
@@ -110,6 +115,10 @@ router.put('/:id', authenticate, requireRole('hr_admin'), (req, res) => {
     fte || posting.fte,
     job_description_url !== undefined ? job_description_url : posting.job_description_url,
     status || posting.status,
+    close_date !== undefined ? toTs(close_date) : posting.close_date,
+    start_date !== undefined ? toTs(start_date) : posting.start_date,
+    contact_name !== undefined ? contact_name : posting.contact_name,
+    contact_email !== undefined ? contact_email : posting.contact_email,
     req.params.id
   );
 

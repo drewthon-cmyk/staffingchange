@@ -53,24 +53,24 @@
         <a href="/hr/employees.html" class="stat-card brown" style="text-decoration:none;cursor:pointer"><div class="stat-number" id="s-users">—</div><div class="stat-label">Registered Employees</div></a>
       </div>
 
-      <!-- Pending HR Approval -->
-      <div class="card mb-4">
-        <div class="card-header">
-          <h2>⚡ Awaiting Your Final Approval</h2>
-          <a href="/hr/applications.html?status=pending_hr" class="btn btn-outline btn-sm">View All</a>
-        </div>
-        <div id="hr-pending-container">
-          <div class="loading-overlay"><div class="spinner"></div></div>
-        </div>
-      </div>
-
       <!-- Recent Applications -->
-      <div class="card">
+      <div class="card mb-4">
         <div class="card-header">
           <h2>Recent Applications</h2>
           <a href="/hr/applications.html" class="btn btn-outline btn-sm">View All</a>
         </div>
         <div id="recent-container">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Pending HR Approval -->
+      <div class="card">
+        <div class="card-header">
+          <h2>⚡ Awaiting Your Final Approval</h2>
+          <a href="/hr/applications.html?status=pending_hr" class="btn btn-outline btn-sm">View All</a>
+        </div>
+        <div id="hr-pending-container">
           <div class="loading-overlay"><div class="spinner"></div></div>
         </div>
       </div>

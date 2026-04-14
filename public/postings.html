@@ -159,9 +159,12 @@ if (user) {
           <div class="posting-meta">
             <div class="posting-meta-item">📊 <span><strong>FTE:</strong> ${p.fte}</span></div>
             <div class="posting-meta-item">📅 <span>Posted ${formatDate(p.posted_date)}</span></div>
+            ${p.close_date ? `<div class="posting-meta-item">🗓️ <span><strong>Closes:</strong> ${formatDate(p.close_date)}</span></div>` : ''}
+            ${p.start_date ? `<div class="posting-meta-item">🚀 <span><strong>Starts:</strong> ${formatDate(p.start_date)}</span></div>` : ''}
             ${p.applicant_count > 0 ? `<div class="posting-meta-item">👤 <span>${p.applicant_count} applicant${p.applicant_count !== 1 ? 's' : ''}</span></div>` : ''}
           </div>
-          ${p.job_description_url ? `<a href="${p.job_description_url}" target="_blank" class="btn btn-outline btn-sm">View Job Description</a>` : ''}
+          ${p.contact_name ? `<div style="margin-top:10px;padding:10px;background:var(--light-gray);border-radius:6px;font-size:.85rem"><strong>Contact:</strong> ${p.contact_name}${p.contact_email ? ` — <a href="mailto:${p.contact_email}" style="color:var(--blue)">${p.contact_email}</a>` : ''}</div>` : ''}
+          ${p.job_description_url ? `<a href="${p.job_description_url}" target="_blank" class="btn btn-outline btn-sm" style="margin-top:10px">View Job Description</a>` : ''}
         </div>
         <div class="posting-card-footer">
           ${postingStatusBadge(p.status)}

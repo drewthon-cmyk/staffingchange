@@ -102,6 +102,13 @@ function initializeDb() {
     );
   `);
 
+  // Add new columns to job_postings if they don't exist (migration)
+  const postingCols = db.prepare("PRAGMA table_info(job_postings)").all().map(c => c.name);
+  if (!postingCols.includes('close_date')) db.prepare("ALTER TABLE job_postings ADD COLUMN close_date INTEGER").run();
+  if (!postingCols.includes('start_date')) db.prepare("ALTER TABLE job_postings ADD COLUMN start_date INTEGER").run();
+  if (!postingCols.includes('contact_name')) db.prepare("ALTER TABLE job_postings ADD COLUMN contact_name TEXT").run();
+  if (!postingCols.includes('contact_email')) db.prepare("ALTER TABLE job_postings ADD COLUMN contact_email TEXT").run();
+
   // Seed schools from config if table is empty
   const schoolCount = db.prepare('SELECT COUNT(*) as c FROM schools').get().c;
   if (schoolCount === 0) {

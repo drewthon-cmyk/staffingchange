@@ -93,25 +93,21 @@
           <input type="url" id="posting-url" class="form-control" placeholder="https://…">
           <p class="form-hint">Link to the full job description document.</p>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-          <div class="form-group">
-            <label>Application Close Date (optional)</label>
-            <input type="date" id="posting-close-date" class="form-control">
-          </div>
-          <div class="form-group">
-            <label>Position Start Date (optional)</label>
-            <input type="date" id="posting-start-date" class="form-control">
-          </div>
+        <div class="form-group">
+          <label>Application Close Date (optional)</label>
+          <input type="date" id="posting-close-date" class="form-control">
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-          <div class="form-group">
-            <label>Contact Name (optional)</label>
-            <input type="text" id="posting-contact-name" class="form-control" placeholder="Jane Smith">
-          </div>
-          <div class="form-group">
-            <label>Contact Email (optional)</label>
-            <input type="email" id="posting-contact-email" class="form-control" placeholder="jsmith@gckschools.com">
-          </div>
+        <div class="form-group">
+          <label>Position Start Date (optional)</label>
+          <input type="date" id="posting-start-date" class="form-control">
+        </div>
+        <div class="form-group">
+          <label>Contact Name (optional)</label>
+          <input type="text" id="posting-contact-name" class="form-control" placeholder="Jane Smith">
+        </div>
+        <div class="form-group">
+          <label>Contact Email (optional)</label>
+          <input type="email" id="posting-contact-email" class="form-control" placeholder="jsmith@gckschools.com">
         </div>
       </form>
     </div>
@@ -174,16 +170,20 @@ if (user) {
       return;
     }
     c.innerHTML = `<div class="card"><div class="table-wrapper"><table><thead><tr>
-      <th>Position Title</th><th>School / Department</th><th>FTE</th><th>Posted</th><th>Closes</th><th>Start Date</th><th>Contact</th><th>Applicants</th><th>Status</th><th>Actions</th>
+      <th>Position</th><th>FTE</th><th>Dates</th><th>Contact</th><th>Applicants</th><th>Status</th><th>Actions</th>
     </tr></thead><tbody>` +
     postings.map(p => `<tr>
-      <td><strong>${p.title}</strong>${p.job_description_url ? ` <a href="${p.job_description_url}" target="_blank" style="font-size:.75rem;color:var(--blue)">[description]</a>` : ''}</td>
-      <td>${p.school_name}</td>
+      <td>
+        <strong>${p.title}</strong>${p.job_description_url ? ` <a href="${p.job_description_url}" target="_blank" style="font-size:.75rem;color:var(--blue)">[desc]</a>` : ''}<br>
+        <small class="text-gray">${p.school_name}</small>
+      </td>
       <td>${p.fte}</td>
-      <td>${formatDate(p.posted_date)}</td>
-      <td>${p.close_date ? formatDate(p.close_date) : '—'}</td>
-      <td>${p.start_date ? formatDate(p.start_date) : '—'}</td>
-      <td>${p.contact_name ? `${p.contact_name}${p.contact_email ? `<br><small><a href="mailto:${p.contact_email}" style="color:var(--blue)">${p.contact_email}</a></small>` : ''}` : '—'}</td>
+      <td style="font-size:.82rem;line-height:1.7">
+        <span style="color:var(--gray)">Posted:</span> ${formatDate(p.posted_date)}<br>
+        <span style="color:var(--gray)">Closes:</span> ${p.close_date ? formatDate(p.close_date) : '—'}<br>
+        <span style="color:var(--gray)">Starts:</span> ${p.start_date ? formatDate(p.start_date) : '—'}
+      </td>
+      <td style="font-size:.82rem">${p.contact_name ? `${p.contact_name}${p.contact_email ? `<br><a href="mailto:${p.contact_email}" style="color:var(--blue)">${p.contact_email}</a>` : ''}` : '—'}</td>
       <td><span style="font-weight:600">${p.applicant_count || 0}</span></td>
       <td>${postingStatusBadge(p.status)}</td>
       <td style="white-space:nowrap">

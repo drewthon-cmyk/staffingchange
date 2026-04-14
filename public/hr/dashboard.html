@@ -43,14 +43,14 @@
     </div>
     <div class="page-body">
       <div class="stats-grid">
-        <div class="stat-card blue"><div class="stat-number" id="s-open">—</div><div class="stat-label">Open Positions</div></div>
-        <div class="stat-card gold"><div class="stat-number" id="s-total">—</div><div class="stat-label">Total Applications</div></div>
-        <div class="stat-card orange"><div class="stat-number" id="s-sending">—</div><div class="stat-label">Awaiting Sending Principal</div></div>
-        <div class="stat-card blue"><div class="stat-number" id="s-interview">—</div><div class="stat-label">Awaiting Interview</div></div>
-        <div class="stat-card gold"><div class="stat-number" id="s-hr">—</div><div class="stat-label">Awaiting HR Approval</div></div>
-        <div class="stat-card green"><div class="stat-number" id="s-approved">—</div><div class="stat-label">Transfers Approved</div></div>
-        <div class="stat-card gray"><div class="stat-number" id="s-denied">—</div><div class="stat-label">Total Denied</div></div>
-        <div class="stat-card brown"><div class="stat-number" id="s-users">—</div><div class="stat-label">Registered Employees</div></div>
+        <a href="/hr/postings.html" class="stat-card blue" style="text-decoration:none;cursor:pointer"><div class="stat-number" id="s-open">—</div><div class="stat-label">Open Positions</div></a>
+        <a href="/hr/applications.html" class="stat-card gold" style="text-decoration:none;cursor:pointer"><div class="stat-number" id="s-total">—</div><div class="stat-label">Total Applications</div></a>
+        <a href="/hr/applications.html?status=pending_sending_principal" class="stat-card orange" style="text-decoration:none;cursor:pointer"><div class="stat-number" id="s-sending">—</div><div class="stat-label">Awaiting Sending Principal</div></a>
+        <a href="/hr/applications.html?status=pending_interview" class="stat-card blue" style="text-decoration:none;cursor:pointer"><div class="stat-number" id="s-interview">—</div><div class="stat-label">Awaiting Interview</div></a>
+        <a href="/hr/applications.html?status=pending_hr" class="stat-card gold" style="text-decoration:none;cursor:pointer"><div class="stat-number" id="s-hr">—</div><div class="stat-label">Awaiting HR Approval</div></a>
+        <a href="/hr/applications.html?status=hr_approved" class="stat-card green" style="text-decoration:none;cursor:pointer"><div class="stat-number" id="s-approved">—</div><div class="stat-label">Transfers Approved</div></a>
+        <a href="/hr/archive.html" class="stat-card gray" style="text-decoration:none;cursor:pointer"><div class="stat-number" id="s-denied">—</div><div class="stat-label">Total Denied</div></a>
+        <a href="/hr/employees.html" class="stat-card brown" style="text-decoration:none;cursor:pointer"><div class="stat-number" id="s-users">—</div><div class="stat-label">Registered Employees</div></a>
       </div>
 
       <!-- Pending HR Approval -->

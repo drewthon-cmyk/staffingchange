@@ -44,7 +44,7 @@ router.post('/:id/sending-decision', authenticate, requireRole('principal', 'hr_
     }
   }
 
-  const newStatus = approved ? 'pending_interview' : 'sending_denied';
+  const newStatus = approved ? 'pending_interview' : 'pending_hr';
   const now = Math.floor(Date.now() / 1000);
 
   db.prepare(`
@@ -56,6 +56,8 @@ router.post('/:id/sending-decision', authenticate, requireRole('principal', 'hr_
 
   if (approved) {
     db.prepare(`INSERT INTO workflow_steps (application_id, step, action) VALUES (?, 'receiving_principal', 'pending')`).run(app.id);
+  } else {
+    db.prepare(`INSERT OR IGNORE INTO workflow_steps (application_id, step, action) VALUES (?, 'hr', 'pending')`).run(app.id);
   }
 
   // Email notifications
@@ -147,7 +149,7 @@ router.post('/:id/receiving-decision', authenticate, requireRole('principal', 'h
     }
   }
 
-  const newStatus = approved ? 'pending_hr' : 'receiving_denied';
+  const newStatus = 'pending_hr';
   const now = Math.floor(Date.now() / 1000);
 
   db.prepare(`
@@ -157,9 +159,7 @@ router.post('/:id/receiving-decision', authenticate, requireRole('principal', 'h
 
   db.prepare('UPDATE applications SET status = ? WHERE id = ?').run(newStatus, app.id);
 
-  if (approved) {
-    db.prepare(`INSERT INTO workflow_steps (application_id, step, action) VALUES (?, 'hr', 'pending')`).run(app.id);
-  }
+  db.prepare(`INSERT OR IGNORE INTO workflow_steps (application_id, step, action) VALUES (?, 'hr', 'pending')`).run(app.id);
 
   const sendingSchool = db.prepare('SELECT * FROM schools WHERE name = ?').get(app.current_school);
 

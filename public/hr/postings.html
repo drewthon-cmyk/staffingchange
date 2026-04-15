@@ -94,8 +94,8 @@
           <p class="form-hint">Link to the full job description document.</p>
         </div>
         <div class="form-group">
-          <label>Application Close Date (optional)</label>
-          <input type="date" id="posting-close-date" class="form-control">
+          <label>Application Close Date <span class="required">*</span></label>
+          <input type="date" id="posting-close-date" class="form-control" required>
         </div>
         <div class="form-group">
           <label>Position Start Date (optional)</label>
@@ -255,7 +255,7 @@ if (user) {
       const id = document.getElementById('posting-id').value;
       const body = {
         title, school_id: parseInt(schoolId), fte, job_description_url: url || null,
-        close_date: document.getElementById('posting-close-date').value || null,
+        close_date: document.getElementById('posting-close-date').value,
         start_date: document.getElementById('posting-start-date').value || null,
         contact_name: document.getElementById('posting-contact-name').value.trim() || null,
         contact_email: document.getElementById('posting-contact-email').value.trim() || null,

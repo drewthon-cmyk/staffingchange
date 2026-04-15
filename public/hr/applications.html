@@ -186,6 +186,7 @@ if (user) {
       const footer = document.getElementById('app-modal-footer');
       let btns = `<button class="btn btn-secondary" onclick="closeModal('appModal')">Close</button>`;
       if (a.resume_drive_url) btns = `<a href="${a.resume_drive_url}" target="_blank" class="btn btn-info">📄 View Resume</a>` + btns;
+      if (['hr_approved','hr_denied'].includes(a.status)) btns += `<button class="btn btn-outline" onclick="printCertificate(${JSON.stringify(a).replace(/"/g,'&quot;')})">🖨️ Print Certificate</button>`;
       if (a.status === 'pending_hr') btns += `<button class="btn btn-primary" onclick="closeModal('appModal');openHrDecision(${a.id},'${a.employee_name.replace(/'/g,"\\'")}','${a.posting_title.replace(/'/g,"\\'")}','${a.school_name.replace(/'/g,"\\'")}')">Make HR Decision</button>`;
       footer.innerHTML = btns;
     } catch {
@@ -197,9 +198,12 @@ if (user) {
   function openHrDecision(id, name, title, school) {
     currentAppId = id;
     document.getElementById('hr-modal-title').textContent = `Final Decision — ${name}`;
-    document.getElementById('hr-modal-info').innerHTML = `<strong>${name}</strong> is transferring to <strong>${title}</strong> at ${school}.<br>Both principals have approved. This is the final HR decision.`;
+    document.getElementById('hr-modal-info').innerHTML = `Review the transfer request for <strong>${name}</strong> to <strong>${title}</strong> at ${school}. Make the final HR decision below.`;
     document.getElementById('hr-notes').value = '';
     hideAlert('hr-alert');
+    const ba = document.getElementById('btn-hr-approve'), bd = document.getElementById('btn-hr-deny');
+    ba.disabled = false; ba.textContent = 'Approve Transfer'; ba.style.background = '';
+    bd.disabled = false; bd.textContent = 'Deny Transfer'; bd.style.background = '';
     openModal('hrModal');
   }
   window.openHrDecision = openHrDecision;
@@ -210,8 +214,10 @@ if (user) {
     hideAlert('hr-alert');
     try {
       await API.post(`/workflow/${currentAppId}/hr-decision`, { approved, notes: document.getElementById('hr-notes').value });
-      closeModal('hrModal');
-      loadApps();
+      btn.innerHTML = approved ? '✅ Approved!' : '✅ Decision Saved';
+      btn.style.background = 'var(--green)';
+      showAlert('hr-alert', approved ? 'Transfer approved! All parties have been notified.' : 'Transfer denied. All parties have been notified.', 'success');
+      setTimeout(() => { closeModal('hrModal'); loadApps(); }, 2000);
     } catch (err) {
       showAlert('hr-alert', err.message);
       btn.disabled = false; btn.textContent = approved ? 'Approve Transfer' : 'Deny Transfer';
@@ -220,6 +226,65 @@ if (user) {
 
   document.getElementById('btn-hr-approve').addEventListener('click', () => submitHrDecision(true));
   document.getElementById('btn-hr-deny').addEventListener('click', () => submitHrDecision(false));
+
+  function printCertificate(a) {
+    const isApproved = a.status === 'hr_approved';
+    const color = isApproved ? '#75C044' : '#c0392b';
+    const stamp = isApproved ? 'APPROVED' : 'DENIED';
+    const title = isApproved ? '✓ Transfer Approved' : '✗ Transfer Denied';
+    const win = window.open('', '_blank', 'width=820,height=700');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Transfer Certificate — ${a.employee_name}</title>
+<style>
+  body{font-family:'Segoe UI',sans-serif;margin:0;padding:48px;color:#2F2012;background:#fff}
+  .cert{border:3px solid #F8B215;border-radius:12px;padding:40px;max-width:680px;margin:0 auto}
+  .cert-header{text-align:center;border-bottom:2px solid #F8B215;padding-bottom:20px;margin-bottom:28px}
+  .cert-header h1{font-size:1.3rem;margin:6px 0 2px}
+  .cert-header p{color:#6F655A;margin:0;font-size:.9rem}
+  .cert-verdict{text-align:center;margin:0 0 28px}
+  .cert-verdict h2{font-size:1.5rem;color:${color};margin:0 0 10px}
+  .stamp{display:inline-block;border:4px solid ${color};color:${color};padding:6px 28px;border-radius:6px;font-size:1.3rem;font-weight:700;letter-spacing:3px;transform:rotate(-4deg)}
+  .cert-row{display:flex;margin-bottom:12px;font-size:.95rem}
+  .cert-row label{font-weight:700;width:170px;color:#6F655A;flex-shrink:0}
+  .cert-divider{border:none;border-top:1px solid #D8D6CD;margin:20px 0}
+  .cert-footer{text-align:center;font-size:.8rem;color:#6F655A;margin-top:24px}
+  .cert-sig{display:flex;justify-content:space-around;margin-top:32px}
+  .cert-sig div{text-align:center;width:200px}
+  .cert-sig .line{border-top:1px solid #2F2012;margin-bottom:6px}
+  .cert-sig p{font-size:.8rem;color:#6F655A;margin:0}
+  @media print{body{padding:20px}.no-print{display:none}}
+</style></head><body>
+<div class="cert">
+  <div class="cert-header">
+    <h1>Garden City Public Schools — USD 457</h1>
+    <p>In-District Transfer Center &nbsp;|&nbsp; Official Transfer Record</p>
+  </div>
+  <div class="cert-verdict">
+    <h2>${title}</h2>
+    <div class="stamp">${stamp}</div>
+  </div>
+  <div class="cert-row"><label>Employee</label><span>${a.employee_name}</span></div>
+  <div class="cert-row"><label>Current School</label><span>${a.current_school}</span></div>
+  <div class="cert-row"><label>Current Position</label><span>${a.current_position}</span></div>
+  <div class="cert-row"><label>Transfer Position</label><span>${a.posting_title}</span></div>
+  <div class="cert-row"><label>Transfer School</label><span>${a.school_name}</span></div>
+  <div class="cert-row"><label>FTE</label><span>${a.fte}</span></div>
+  ${a.hr_notes ? `<div class="cert-row"><label>HR Notes</label><span>${a.hr_notes}</span></div>` : ''}
+  <hr class="cert-divider">
+  <div class="cert-sig">
+    <div><div class="line"></div><p>HR Administrator Signature</p></div>
+    <div><div class="line"></div><p>Date</p></div>
+  </div>
+  <div class="cert-footer">
+    <p>Garden City Public Schools, USD 457 &nbsp;·&nbsp; In-District Transfer Center</p>
+    <p>This document serves as official documentation of the transfer decision.</p>
+  </div>
+</div>
+<script>setTimeout(()=>window.print(),400);<\/script>
+</body></html>`);
+    win.document.close();
+  }
+  window.printCertificate = printCertificate;
 
   document.getElementById('exportBtn').addEventListener('click', () => {
     const status = document.getElementById('statusFilter').value;

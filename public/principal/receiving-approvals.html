@@ -162,6 +162,8 @@ if (user) {
     document.getElementById('interview-date').value = '';
     document.getElementById('interview-location').value = '';
     hideAlert('schedule-alert');
+    const btn = document.getElementById('btn-schedule');
+    btn.disabled = false; btn.textContent = 'Save Interview'; btn.style.background = '';
     openModal('scheduleModal');
   }
   window.openSchedule = openSchedule;
@@ -194,11 +196,11 @@ if (user) {
         interview_date: date,
         interview_location: document.getElementById('interview-location').value,
       });
-      closeModal('scheduleModal');
-      loadApps();
+      btn.innerHTML = '✅ Saved!'; btn.style.background = 'var(--green)';
+      setTimeout(() => { closeModal('scheduleModal'); loadApps(); }, 1200);
     } catch (err) {
       showAlert('schedule-alert', err.message);
-      btn.disabled = false; btn.textContent = 'Save Interview';
+      btn.disabled = false; btn.textContent = 'Save Interview'; btn.style.background = '';
     }
   });
 

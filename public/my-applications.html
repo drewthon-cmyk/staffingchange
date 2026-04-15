@@ -52,6 +52,7 @@ function printCert(id) {
   const a = myApps.find(x => x.id === id);
   if (!a) return;
   const isApproved = a.status === 'hr_approved';
+  const deniedBy = a.status === 'sending_denied' ? 'Sending Principal' : a.status === 'receiving_denied' ? 'Receiving Principal' : 'HR';
   const color = isApproved ? '#75C044' : '#c0392b';
   const win = window.open('', '_blank', 'width=820,height=700');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -81,7 +82,7 @@ function printCert(id) {
     <p>In-District Transfer Center &nbsp;|&nbsp; Official Transfer Record</p>
   </div>
   <div class="cert-verdict">
-    <h2>${isApproved ? '✓ Transfer Approved' : '✗ Transfer Denied'}</h2>
+    <h2>${isApproved ? '✓ Transfer Approved' : `✗ Transfer Denied — ${deniedBy}`}</h2>
     <div class="stamp">${isApproved ? 'APPROVED' : 'DENIED'}</div>
   </div>
   <div class="cert-row"><label>Employee</label><span>${a.employee_name}</span></div>
@@ -124,7 +125,7 @@ if (user) {
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             ${statusLabel(a.status)}
             <a href="/application-status.html?id=${a.id}" class="btn btn-outline btn-sm">Details</a>
-            ${['hr_approved','hr_denied'].includes(a.status) ? `<button class="btn btn-outline btn-sm" onclick="printCert(${a.id})">🖨️ Certificate</button>` : ''}
+            ${['hr_approved','hr_denied','sending_denied','receiving_denied'].includes(a.status) ? `<button class="btn btn-outline btn-sm" onclick="printCert(${a.id})">🖨️ Certificate</button>` : ''}
           </div>
         </div>
         <div class="card-body">

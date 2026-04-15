@@ -186,7 +186,7 @@ if (user) {
       const footer = document.getElementById('app-modal-footer');
       let btns = `<button class="btn btn-secondary" onclick="closeModal('appModal')">Close</button>`;
       if (a.resume_drive_url) btns = `<a href="${a.resume_drive_url}" target="_blank" class="btn btn-info">📄 View Resume</a>` + btns;
-      if (['hr_approved','hr_denied'].includes(a.status)) btns += `<button class="btn btn-outline" onclick="printCertificate(${JSON.stringify(a).replace(/"/g,'&quot;')})">🖨️ Print Certificate</button>`;
+      if (['hr_approved','hr_denied','sending_denied','receiving_denied'].includes(a.status)) btns += `<button class="btn btn-outline" onclick="printCertificate(${JSON.stringify(a).replace(/"/g,'&quot;')})">🖨️ Print Certificate</button>`;
       if (a.status === 'pending_hr') btns += `<button class="btn btn-primary" onclick="closeModal('appModal');openHrDecision(${a.id},'${a.employee_name.replace(/'/g,"\\'")}','${a.posting_title.replace(/'/g,"\\'")}','${a.school_name.replace(/'/g,"\\'")}')">Make HR Decision</button>`;
       footer.innerHTML = btns;
     } catch {
@@ -229,9 +229,10 @@ if (user) {
 
   function printCertificate(a) {
     const isApproved = a.status === 'hr_approved';
+    const deniedBy = a.status === 'sending_denied' ? 'Sending Principal' : a.status === 'receiving_denied' ? 'Receiving Principal' : 'HR';
     const color = isApproved ? '#75C044' : '#c0392b';
     const stamp = isApproved ? 'APPROVED' : 'DENIED';
-    const title = isApproved ? '✓ Transfer Approved' : '✗ Transfer Denied';
+    const title = isApproved ? '✓ Transfer Approved' : `✗ Transfer Denied — ${deniedBy}`;
     const win = window.open('', '_blank', 'width=820,height=700');
     win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
 <title>Transfer Certificate — ${a.employee_name}</title>

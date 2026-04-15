@@ -55,6 +55,7 @@
                 <option value="sending_denied">Denied by Sending Principal</option>
                 <option value="receiving_denied">Denied by Receiving Principal</option>
                 <option value="position_filled">Position Filled (other candidate)</option>
+                <option value="position_filled_outside">Filled by Outside Applicant</option>
               </select>
             </div>
             <div class="form-group" style="margin:0">
@@ -134,7 +135,8 @@ if (user) {
       hr_denied:        { text: 'Denied by HR', cls: 'badge-denied' },
       sending_denied:   { text: 'Denied — Sending Principal', cls: 'badge-denied' },
       receiving_denied: { text: 'Denied — Receiving Principal', cls: 'badge-denied' },
-      position_filled:  { text: 'Position Filled', cls: 'badge-closed' },
+      position_filled:         { text: 'Position Filled', cls: 'badge-closed' },
+      position_filled_outside: { text: 'Filled — Outside Hire', cls: 'badge-closed' },
     };
     const s = map[status] || { text: status, cls: 'badge-pending' };
     return `<span class="badge ${s.cls}">${s.text}</span>`;

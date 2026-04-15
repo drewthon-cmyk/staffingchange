@@ -1,6 +1,8 @@
 const express = require('express');
 const { getDb } = require('../db/schema');
 const { authenticate, requireRole } = require('../middleware/auth');
+const email = require('../services/email');
+const config = require('../config/config');
 
 const router = express.Router();
 
@@ -131,6 +133,42 @@ router.delete('/:id', authenticate, requireRole('hr_admin'), (req, res) => {
   const db = getDb();
   db.prepare("UPDATE job_postings SET status = 'closed' WHERE id = ?").run(req.params.id);
   res.json({ message: 'Posting closed.' });
+});
+
+// Mark filled by outside applicant (HR only)
+router.post('/:id/outside-hire', authenticate, requireRole('hr_admin'), async (req, res) => {
+  const db = getDb();
+  const posting = db.prepare(`
+    SELECT jp.*, s.name as school_name FROM job_postings jp
+    JOIN schools s ON jp.school_id = s.id WHERE jp.id = ?
+  `).get(req.params.id);
+  if (!posting) return res.status(404).json({ error: 'Posting not found.' });
+
+  const now = Math.floor(Date.now() / 1000);
+  db.prepare("UPDATE job_postings SET status = 'filled', fill_reason = 'outside', filled_date = ? WHERE id = ?").run(now, req.params.id);
+
+  // Get all active applications for this posting
+  const apps = db.prepare(`
+    SELECT a.*, u.email as employee_email,
+           s.principal_email as sending_principal_email, s.principal_name as sending_principal_name
+    FROM applications a
+    LEFT JOIN users u ON a.employee_id = u.id
+    LEFT JOIN schools s ON s.name = a.current_school
+    WHERE a.posting_id = ? AND a.status NOT IN ('hr_approved','hr_denied','position_filled','position_filled_outside')
+  `).all(req.params.id);
+
+  if (apps.length > 0) {
+    const placeholders = apps.map(() => '?').join(',');
+    db.prepare(`UPDATE applications SET status = 'position_filled_outside' WHERE id IN (${placeholders})`).run(...apps.map(a => a.id));
+  }
+
+  try {
+    await email.notifyOutsideHire(apps, posting, { name: posting.school_name });
+  } catch (err) {
+    console.error('Email error:', err.message);
+  }
+
+  res.json({ message: 'Position marked as filled by outside applicant.' });
 });
 
 module.exports = router;

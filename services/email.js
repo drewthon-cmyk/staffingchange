@@ -140,22 +140,22 @@ async function notifySendingPrincipalDecision(approved, app, posting, school, em
       <a href="${baseUrl}" class="btn">Log In to Review</a>
     `));
   } else {
-    // To employee
-    await sendEmail(employeeEmail, `Transfer Update — Request Denied by Current Administrator`, baseTemplate(`
-      <h2>Your Transfer Request Has Been ${decision}</h2>
-      <p>We're sorry to inform you that your current administrator has denied your transfer request for the position below.</p>
+    // To employee — inform that HR will make the final call
+    await sendEmail(employeeEmail, `Transfer Update — Under HR Review`, baseTemplate(`
+      <h2>Your Transfer Request Is Being Reviewed by HR</h2>
+      <p>Your current administrator has raised a concern about your transfer request. The HR Department will make the final decision.</p>
       ${applicationInfo(app, posting, school)}
       ${notesHtml}
       <a href="${baseUrl}/my-applications.html" class="btn">View Application Status</a>
     `));
 
-    // To HR
-    await sendEmail(hrEmails, `Transfer Denied by Sending Principal — ${app.employee_name}`, baseTemplate(`
-      <h2>Transfer Request Denied by Sending Principal</h2>
-      <p>A transfer request has been denied by the sending principal. No further action is required.</p>
+    // To HR — action required
+    await sendEmail(hrEmails, `Action Required — Transfer Flagged by Sending Principal — ${app.employee_name}`, baseTemplate(`
+      <h2>Transfer Request Requires Your Final Decision</h2>
+      <p>The sending principal has flagged this transfer request. Please log in to review and make a final determination.</p>
       ${applicationInfo(app, posting, school)}
       ${notesHtml}
-      <a href="${baseUrl}/hr" class="btn">View in HR Dashboard</a>
+      <a href="${baseUrl}/hr/applications.html" class="btn">Review in HR Dashboard</a>
     `));
   }
 }
@@ -200,14 +200,33 @@ async function notifyReceivingPrincipalDecision(approved, app, posting, school, 
       <a href="${baseUrl}" class="btn">Log In to Review</a>
     `));
   } else {
-    const recipients = [employeeEmail, ...hrEmails];
-    await sendEmail(recipients, `Transfer Denied by Receiving Principal — ${app.employee_name}`, baseTemplate(`
-      <h2>Transfer ${decision} by Receiving Principal</h2>
-      <p>The receiving principal has denied the transfer request for <strong>${app.employee_name}</strong>. No further action is required.</p>
+    // Receiving principal denied — now goes to HR for final decision
+    // Notify employee
+    await sendEmail(employeeEmail, `Transfer Update — Under HR Review`, baseTemplate(`
+      <h2>Your Transfer Request Is Being Reviewed by HR</h2>
+      <p>The receiving principal has raised a concern about your transfer request. The HR Department will make the final decision.</p>
       ${applicationInfo(app, posting, school)}
       ${interviewBox}
       ${notesHtml}
-      <a href="${baseUrl}" class="btn">View in Dashboard</a>
+      <a href="${baseUrl}/my-applications.html" class="btn">View Application Status</a>
+    `));
+    // Notify sending principal
+    if (sendingPrincipalEmail) {
+      await sendEmail(sendingPrincipalEmail, `Transfer Update — ${app.employee_name} Referred to HR`, baseTemplate(`
+        <h2>Transfer Request Referred to HR</h2>
+        <p>The receiving principal has flagged <strong>${app.employee_name}</strong>'s transfer request. HR will make the final decision.</p>
+        ${applicationInfo(app, posting, school)}
+        ${notesHtml}
+      `));
+    }
+    // Notify HR — action required
+    await sendEmail(hrEmails, `Action Required — Transfer Flagged by Receiving Principal — ${app.employee_name}`, baseTemplate(`
+      <h2>Transfer Request Requires Your Final Decision</h2>
+      <p>The receiving principal (<strong>${receivingPrincipalName}</strong>) has flagged this transfer request after interview. Please log in to review and make a final determination.</p>
+      ${applicationInfo(app, posting, school)}
+      ${interviewBox}
+      ${notesHtml}
+      <a href="${baseUrl}/hr/applications.html" class="btn">Review in HR Dashboard</a>
     `));
   }
 }
@@ -245,6 +264,27 @@ async function notifyPositionFilled(apps, posting, school) {
   }
 }
 
+async function notifyOutsideHire(apps, posting, school) {
+  const baseUrl = config.baseUrl;
+  for (const app of apps) {
+    if (!app.employee_email) continue;
+    const recipients = [app.employee_email];
+    if (app.sending_principal_email) recipients.push(app.sending_principal_email);
+    await sendEmail(recipients, `Position Filled by Outside Applicant — ${posting.title}`, baseTemplate(`
+      <h2>Position Filled by Outside Hire</h2>
+      <p>The following position has been filled by an outside applicant and is no longer available through the Transfer Center.</p>
+      <div class="info-box">
+        <p><strong>Position:</strong> ${posting.title}</p>
+        <p><strong>School/Department:</strong> ${school.name}</p>
+        <p><strong>FTE:</strong> ${posting.fte}</p>
+        <p><strong>Applicant:</strong> ${app.employee_name}</p>
+      </div>
+      <p>We appreciate your interest. Please browse other available transfer opportunities.</p>
+      <a href="${baseUrl}/postings.html" class="btn">View Open Positions</a>
+    `));
+  }
+}
+
 async function sendPasswordReset(email, name, resetUrl) {
   await sendEmail(email, 'Transfer Center — Password Reset Request', baseTemplate(`
     <h2>Password Reset Request</h2>
@@ -263,5 +303,6 @@ module.exports = {
   notifyReceivingPrincipalDecision,
   notifyHrDecision,
   notifyPositionFilled,
+  notifyOutsideHire,
   sendPasswordReset,
 };

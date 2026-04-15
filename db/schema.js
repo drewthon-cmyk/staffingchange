@@ -108,6 +108,7 @@ function initializeDb() {
   if (!postingCols.includes('start_date')) db.prepare("ALTER TABLE job_postings ADD COLUMN start_date INTEGER").run();
   if (!postingCols.includes('contact_name')) db.prepare("ALTER TABLE job_postings ADD COLUMN contact_name TEXT").run();
   if (!postingCols.includes('contact_email')) db.prepare("ALTER TABLE job_postings ADD COLUMN contact_email TEXT").run();
+  if (!postingCols.includes('fill_reason')) db.prepare("ALTER TABLE job_postings ADD COLUMN fill_reason TEXT").run();
 
   // Seed schools from config if table is empty
   const schoolCount = db.prepare('SELECT COUNT(*) as c FROM schools').get().c;

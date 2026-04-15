@@ -188,7 +188,10 @@ if (user) {
       <td>${postingStatusBadge(p.status)}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-outline btn-sm" onclick="editPosting(${JSON.stringify(p).replace(/"/g,'&quot;')})">Edit</button>
-        ${p.status === 'open' ? `<button class="btn btn-danger btn-sm" onclick="confirmClose(${p.id})" style="margin-left:4px">Close</button>` : ''}
+        ${p.status === 'open' ? `
+          <button class="btn btn-warning btn-sm" onclick="confirmOutsideHire(${p.id},'${p.title.replace(/'/g,"\\'")}')">Outside Hire</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmClose(${p.id})">Close</button>
+        ` : ''}
       </td>
     </tr>`).join('') +
     `</tbody></table></div></div>`;
@@ -222,6 +225,14 @@ if (user) {
     openModal('closeModal');
   }
   window.confirmClose = confirmClose;
+
+  function confirmOutsideHire(id, title) {
+    if (!confirm(`Mark "${title}" as filled by an outside applicant?\n\nThis will close the posting and notify all applicants that the position has been filled externally.`)) return;
+    API.post(`/postings/${id}/outside-hire`, {}).then(() => {
+      loadPostings();
+    }).catch(err => alert(err.message));
+  }
+  window.confirmOutsideHire = confirmOutsideHire;
 
   document.getElementById('confirm-close-btn').addEventListener('click', async () => {
     try {
